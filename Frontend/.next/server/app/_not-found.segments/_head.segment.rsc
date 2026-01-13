@@ -1,0 +1,7 @@
+1:"$Sreact.fragment"
+2:I[97367,["/_next/static/chunks/767d5373faa3cbd0.js","/_next/static/chunks/fec25db3408c5c80.js","/_next/static/chunks/5ba5c7ff239ea533.js","/_next/static/chunks/b596a3a61986ec4f.js","/_next/static/chunks/300efeda8864e0a2.js"],"ViewportBoundary"]
+4:I[97367,["/_next/static/chunks/767d5373faa3cbd0.js","/_next/static/chunks/fec25db3408c5c80.js","/_next/static/chunks/5ba5c7ff239ea533.js","/_next/static/chunks/b596a3a61986ec4f.js","/_next/static/chunks/300efeda8864e0a2.js"],"MetadataBoundary"]
+5:"$Sreact.suspense"
+0:{"buildId":"rrzTjwnnMR4pJTfQVg-2a","rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
+3:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+6:[["$","title","0",{"children":"SGLA - Sistema de Gestión Logística para Almacenes"}],["$","meta","1",{"name":"description","content":"Soluciones Logísticas Integrales - WMS"}],["$","meta","2",{"name":"generator","content":"v0.app"}]]

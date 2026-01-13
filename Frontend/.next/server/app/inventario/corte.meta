@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/inventario/layout,_N_T_/inventario/corte/layout,_N_T_/inventario/corte/page,_N_T_/inventario/corte"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/inventario/corte/__PAGE__",
+    "/inventario/corte",
+    "/inventario",
+    "/_index",
+    "/_head"
+  ]
+}

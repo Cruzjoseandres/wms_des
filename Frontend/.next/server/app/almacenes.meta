@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/almacenes/layout,_N_T_/almacenes/page,_N_T_/almacenes"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/almacenes/__PAGE__",
+    "/almacenes",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/anulaciones/layout,_N_T_/anulaciones/page,_N_T_/anulaciones"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/anulaciones/__PAGE__",
+    "/anulaciones",
+    "/_index",
+    "/_head"
+  ]
+}

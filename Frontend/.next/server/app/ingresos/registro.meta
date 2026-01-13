@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/ingresos/layout,_N_T_/ingresos/registro/layout,_N_T_/ingresos/registro/page,_N_T_/ingresos/registro"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/ingresos/registro/__PAGE__",
+    "/ingresos/registro",
+    "/ingresos",
+    "/_index",
+    "/_head"
+  ]
+}

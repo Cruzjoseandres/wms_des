@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/administracion/layout,_N_T_/administracion/almacenes/layout,_N_T_/administracion/almacenes/page,_N_T_/administracion/almacenes"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/administracion/almacenes/__PAGE__",
+    "/administracion/almacenes",
+    "/administracion",
+    "/_index",
+    "/_head"
+  ]
+}

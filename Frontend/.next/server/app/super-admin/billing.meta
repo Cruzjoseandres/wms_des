@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/super-admin/layout,_N_T_/super-admin/billing/layout,_N_T_/super-admin/billing/page,_N_T_/super-admin/billing"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/super-admin/billing/__PAGE__",
+    "/super-admin/billing",
+    "/super-admin",
+    "/_index",
+    "/_head"
+  ]
+}

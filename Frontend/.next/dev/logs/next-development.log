@@ -1,0 +1,38 @@
+[00:00:05.582] Server  LOG      ✓ Ready in 4.2s
+[00:00:09.506] Server  LOG      ○ Compiling /ingresos ...
+[00:00:21.183] Server  ERROR   (node:11472) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+[00:00:22.501] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:23.055] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:00:23.055] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:00:23.895] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:00:23.895] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:00:24.402] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:00:24.402] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/ingresos","route":"/ingresos"}
+[00:00:24.402] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3000/ingresos color: rgb(120, 120, 120) color: inherit {"dp":"/ingresos","o":"http://localhost:3000/ingresos","sdkn":"@vercel/analytics/next","sdkv":"1.6.1","sv":"0.1.3","ts":1768309737397}
+[00:01:36.119] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:36.943] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:01:36.944] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:01:36.944] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:01:36.944] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:01:37.513] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:01:37.513] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/ingresos","route":"/ingresos"}
+[00:01:37.513] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3000/ingresos color: rgb(120, 120, 120) color: inherit {"dp":"/ingresos","o":"http://localhost:3000/ingresos","sdkn":"@vercel/analytics/next","sdkv":"1.6.1","sv":"0.1.3","ts":1768309810501}
+[00:04:04.796] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3000/ingresos/nuevo color: rgb(120, 120, 120) color: inherit {"dp":"/ingresos/nuevo","o":"http://localhost:3000/ingresos/nuevo","sdkn":"@vercel/analytics/next","sdkv":"1.6.1","sv":"0.1.3","ts":1768309957776}
+[00:04:04.979] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:04:04.979] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:22:46.472] Server  LOG      ✓ Compiled in 1099ms
+[00:22:48.391] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:22:48.391] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:23:13.063] Server  LOG      ✓ Compiled in 422ms
+[00:23:48.900] Server  LOG      ✓ Compiled in 795ms
+[00:24:17.655] Server  LOG      ✓ Compiled in 440ms
+[00:25:22.078] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:25:23.179] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:25:23.179] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:25:23.965] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:25:23.965] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/ingresos/nuevo","route":"/ingresos/nuevo"}
+[00:25:23.965] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3000/ingresos/nuevo color: rgb(120, 120, 120) color: inherit {"dp":"/ingresos/nuevo","o":"http://localhost:3000/ingresos/nuevo","sdkn":"@vercel/analytics/next","sdkv":"1.6.1","sv":"0.1.3","ts":1768311236964}
+[00:26:12.159] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:26:12.159] Browser ERROR   [v0] Error reading from localStorage: {}
+[00:26:12.797] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3000/ingresos color: rgb(120, 120, 120) color: inherit {"dp":"/ingresos","o":"http://localhost:3000/ingresos","sdkn":"@vercel/analytics/next","sdkv":"1.6.1","sv":"0.1.3","ts":1768311285411}

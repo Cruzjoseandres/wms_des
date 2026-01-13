@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/inventario/layout,_N_T_/inventario/gestion/layout,_N_T_/inventario/gestion/page,_N_T_/inventario/gestion"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/inventario/gestion/__PAGE__",
+    "/inventario/gestion",
+    "/inventario",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/super-admin/layout,_N_T_/super-admin/analytics/layout,_N_T_/super-admin/analytics/page,_N_T_/super-admin/analytics"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/super-admin/analytics/__PAGE__",
+    "/super-admin/analytics",
+    "/super-admin",
+    "/_index",
+    "/_head"
+  ]
+}

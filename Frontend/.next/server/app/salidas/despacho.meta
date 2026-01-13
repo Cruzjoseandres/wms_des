@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/salidas/layout,_N_T_/salidas/despacho/layout,_N_T_/salidas/despacho/page,_N_T_/salidas/despacho"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/salidas/despacho/__PAGE__",
+    "/salidas/despacho",
+    "/salidas",
+    "/_index",
+    "/_head"
+  ]
+}
