@@ -17,34 +17,114 @@ import { toast } from "sonner"
 import { ItemService, type ItemBackend } from "@/lib/api/item.service"
 import { AlmacenService, type AlmacenBackend } from "@/lib/api/almacen.service"
 
-// Mock API products (para tab externo)
+// Mock API products (para tab externo) - Simula productos de API externa
 const MOCK_API_DOCS: Record<string, IngresoItem[]> = {
+  // Orden de proveedor farmacéutico
   "SAP-2024-001": [
     {
-      id: "i1",
-      producto: "PRD-001",
-      descripcion: "Producto Premium A",
-      cantidad: 100,
-      lote: "L2025-100",
-      vencimiento: "2026-06-30",
+      id: "api-1",
+      producto: "MED-001",
+      descripcion: "Paracetamol 500mg x 100 tabletas",
+      cantidad: 500,
+      lote: "LOTE-F2025-001",
+      vencimiento: "2027-03-15",
     },
     {
-      id: "i2",
-      producto: "PRD-002",
-      descripcion: "Producto Premium B",
-      cantidad: 50,
-      lote: "L2025-101",
-      vencimiento: "2026-12-31",
+      id: "api-2",
+      producto: "MED-002",
+      descripcion: "Ibuprofeno 400mg x 50 cápsulas",
+      cantidad: 300,
+      lote: "LOTE-F2025-002",
+      vencimiento: "2026-11-30",
+    },
+    {
+      id: "api-3",
+      producto: "MED-003",
+      descripcion: "Omeprazol 20mg x 28 cápsulas",
+      cantidad: 200,
+      lote: "LOTE-F2025-003",
+      vencimiento: "2026-08-20",
     },
   ],
+  // Orden de proveedor electrónico
   "SAP-2024-002": [
     {
-      id: "i3",
-      producto: "PRD-003",
-      descripcion: "Producto Estándar C",
-      cantidad: 200,
-      lote: "L2025-102",
-      vencimiento: "2025-12-15",
+      id: "api-4",
+      producto: "ELEC-001",
+      descripcion: "Cable USB-C 1.5m Alta Velocidad",
+      cantidad: 1000,
+      lote: "LOTE-E2025-001",
+      vencimiento: "",
+    },
+    {
+      id: "api-5",
+      producto: "ELEC-002",
+      descripcion: "Cargador Rápido 65W USB-C",
+      cantidad: 250,
+      lote: "LOTE-E2025-002",
+      vencimiento: "",
+    },
+  ],
+  // Orden de proveedor de alimentos
+  "SAP-2024-003": [
+    {
+      id: "api-6",
+      producto: "ALIM-001",
+      descripcion: "Leche Entera UHT 1L",
+      cantidad: 2000,
+      lote: "LOTE-A2025-001",
+      vencimiento: "2025-06-15",
+    },
+    {
+      id: "api-7",
+      producto: "ALIM-002",
+      descripcion: "Aceite de Oliva Extra Virgen 500ml",
+      cantidad: 400,
+      lote: "LOTE-A2025-002",
+      vencimiento: "2026-12-01",
+    },
+    {
+      id: "api-8",
+      producto: "ALIM-003",
+      descripcion: "Arroz Integral Premium 1kg",
+      cantidad: 800,
+      lote: "LOTE-A2025-003",
+      vencimiento: "2026-02-28",
+    },
+    {
+      id: "api-9",
+      producto: "ALIM-004",
+      descripcion: "Atún en Aceite Lata 170g",
+      cantidad: 1500,
+      lote: "LOTE-A2025-004",
+      vencimiento: "2027-09-10",
+    },
+  ],
+  // Orden mixta grande
+  "SAP-2024-004": [
+    {
+      id: "api-10",
+      producto: "GEN-001",
+      descripcion: "Detergente Líquido Concentrado 2L",
+      cantidad: 600,
+      lote: "LOTE-G2025-001",
+      vencimiento: "2027-01-15",
+    },
+    {
+      id: "api-11",
+      producto: "GEN-002",
+      descripcion: "Papel Higiénico Doble Hoja x12",
+      cantidad: 1200,
+      lote: "LOTE-G2025-002",
+      vencimiento: "",
+    },
+    {
+      id: "api-12",
+      producto: "GEN-003",
+      descripcion: "Jabón Antibacterial Líquido 500ml",
+      cantidad: 450,
+      lote: "LOTE-G2025-003",
+      vencimiento: "2026-05-20",
     },
   ],
 }
@@ -130,6 +210,11 @@ export default function NuevoIngresoPage() {
 
   const handleUpdateItem = (id: string, field: keyof IngresoItem, value: string | number) => {
     setItems(items.map((i) => (i.id === id ? { ...i, [field]: value } : i)))
+  }
+
+  // Función para actualizar items de la API externa (cantidad, lote, vencimiento)
+  const handleUpdateApiItem = (id: string, field: keyof IngresoItem, value: string | number) => {
+    setApiItems(apiItems.map((i) => (i.id === id ? { ...i, [field]: value } : i)))
   }
 
   const handleSubmit = async () => {
@@ -368,7 +453,7 @@ export default function NuevoIngresoPage() {
                         )}
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">Prueba con: SAP-2024-001 o SAP-2024-002</p>
+                    <p className="text-xs text-muted-foreground">Prueba con: SAP-2024-001, SAP-2024-002, SAP-2024-003 o SAP-2024-004</p>
                   </div>
 
                   {apiFound && (
@@ -379,18 +464,54 @@ export default function NuevoIngresoPage() {
                   )}
 
                   {apiItems.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Productos del Documento</Label>
-                      <div className="space-y-2">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <Label>Productos del Documento (Editables)</Label>
+                        <span className="text-xs text-muted-foreground">
+                          Puede modificar cantidad, lote y vencimiento
+                        </span>
+                      </div>
+                      <div className="space-y-3">
                         {apiItems.map((item) => (
-                          <div key={item.id} className="p-3 bg-secondary/50 rounded-lg space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{item.producto}</span>
-                              <span className="text-sm text-muted-foreground">Cantidad: {item.cantidad}</span>
+                          <div key={item.id} className="p-4 bg-secondary/50 rounded-lg space-y-3">
+                            {/* Info del producto (solo lectura) */}
+                            <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                              <div>
+                                <span className="font-medium text-primary">{item.producto}</span>
+                                <p className="text-sm text-muted-foreground">{item.descripcion}</p>
+                              </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">{item.descripcion}</p>
-                            <div className="text-xs text-muted-foreground">
-                              Lote: {item.lote} | Vencimiento: {item.vencimiento}
+
+                            {/* Campos editables */}
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">Cantidad *</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={item.cantidad || ""}
+                                  onChange={(e) => handleUpdateApiItem(item.id, "cantidad", Number(e.target.value))}
+                                  className="bg-secondary border-border h-9"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Lote</Label>
+                                <Input
+                                  value={item.lote}
+                                  onChange={(e) => handleUpdateApiItem(item.id, "lote", e.target.value)}
+                                  placeholder="Ej: LOTE-2025-001"
+                                  className="bg-secondary border-border h-9"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Fecha Vencimiento</Label>
+                                <Input
+                                  type="date"
+                                  value={item.vencimiento}
+                                  onChange={(e) => handleUpdateApiItem(item.id, "vencimiento", e.target.value)}
+                                  className="bg-secondary border-border h-9"
+                                />
+                              </div>
                             </div>
                           </div>
                         ))}
