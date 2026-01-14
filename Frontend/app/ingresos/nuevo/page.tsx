@@ -40,7 +40,7 @@ const MOCK_API_DOCS: Record<string, IngresoItem[]> = {
     {
       id: "api-3",
       producto: "MED-003",
-      descripcion: "Omeprazol 20mg x 28 cápsulas",
+      descripcion: "Omeprazol 20mg x 28 cápsula",
       cantidad: 200,
       lote: "LOTE-F2025-003",
       vencimiento: "2026-08-20",
