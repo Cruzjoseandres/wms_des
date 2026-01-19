@@ -1,5 +1,11 @@
 {
+  "/administracion/productos/page": "app/administracion/productos/page.js",
+  "/almacen/kardex/page": "app/almacen/kardex/page.js",
+  "/almacen/stock/page": "app/almacen/stock/page.js",
   "/ingresos/nuevo/page": "app/ingresos/nuevo/page.js",
+  "/ingresos/page": "app/ingresos/page.js",
   "/ingresos/registro/page": "app/ingresos/registro/page.js",
+  "/ingresos/ubicacion/page": "app/ingresos/ubicacion/page.js",
+  "/inventario/gestion/page": "app/inventario/gestion/page.js",
   "/page": "app/page.js"
 }

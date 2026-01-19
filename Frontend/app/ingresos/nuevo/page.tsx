@@ -12,13 +12,22 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useIngresosStore, type IngresoItem } from "@/lib/stores/ingresos-store"
-import { Search, Loader2, CheckCircle2, AlertCircle, CalendarDays } from "lucide-react"
+import { Search, Loader2, CheckCircle2, AlertCircle, CalendarDays, XCircle, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { AlmacenService, type AlmacenBackend } from "@/lib/api/almacen.service"
 import { cn } from "@/lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
-import { DocumentoExternoService } from "@/lib/api/documento_externo.service"
+import { DocumentoExternoService, type DocumentoExterno } from "@/lib/api/documento_externo.service"
 
 export default function NuevoIngresoPage() {
   const router = useRouter()
@@ -34,7 +43,8 @@ export default function NuevoIngresoPage() {
   const [isSearching, setIsSearching] = useState(false)
 
   const [foundItems, setFoundItems] = useState<IngresoItem[]>([])
-  const [foundDocInfo, setFoundDocInfo] = useState<{ doc: string, origen: string } | null>(null)
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
+  const [foundDocInfo, setFoundDocInfo] = useState<{ id: number, doc: string, origen: string } | null>(null)
 
   const [almacenId, setAlmacenId] = useState<string>("")
   const [observaciones, setObservaciones] = useState("")
@@ -46,6 +56,15 @@ export default function NuevoIngresoPage() {
   const [proveedorManual, setProveedorManual] = useState("")
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Modal de error duplicado
+  const [showDuplicateError, setShowDuplicateError] = useState(false)
+  const [duplicateErrorMessage, setDuplicateErrorMessage] = useState("")
+
+  // Autocompletado de documentos
+  const [suggestions, setSuggestions] = useState<DocumentoExterno[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
 
   // Cargar almacenes y fechas al montar
   useEffect(() => {
@@ -70,6 +89,60 @@ export default function NuevoIngresoPage() {
     loadData()
   }, [])
 
+  // Buscar sugerencias mientras escribe (con debounce)
+  useEffect(() => {
+    const tipoFuente = mode === "api" ? "API_ERP" : "MANUAL"
+
+    // Si el texto es muy corto, limpiar sugerencias
+    if (searchQuery.length < 1) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+
+    // Debounce de 300ms
+    const timeoutId = setTimeout(async () => {
+      setIsLoadingSuggestions(true)
+      try {
+        const docs = await DocumentoExternoService.listar(searchQuery, tipoFuente)
+        setSuggestions(docs)
+        setShowSuggestions(docs.length > 0)
+      } catch (error) {
+        console.error("Error al buscar sugerencias:", error)
+        setSuggestions([])
+      } finally {
+        setIsLoadingSuggestions(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, mode])
+
+  // Seleccionar una sugerencia del dropdown
+  const handleSelectSuggestion = (doc: DocumentoExterno) => {
+    setSearchQuery(doc.nroDocumento)
+    setShowSuggestions(false)
+
+    // Cargar directamente los datos del documento seleccionado
+    const mappedItems: IngresoItem[] = doc.items.map((d, index) => ({
+      id: `gen-${Date.now()}-${index}`,
+      producto: d.codItem,
+      descripcion: d.descripcion,
+      cantidad: Number(d.cantidad),
+      lote: d.lote || "",
+      vencimiento: d.fechaVencimiento ? d.fechaVencimiento.split("T")[0] : "",
+    }))
+
+    setFoundItems(mappedItems)
+    setSelectedItemIds(new Set(mappedItems.map(item => item.id)))
+    setFoundDocInfo({
+      id: doc.id,
+      doc: doc.nroDocumento,
+      origen: doc.proveedor
+    })
+    toast.success("Documento seleccionado")
+  }
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       toast.error("Ingrese un número de documento para buscar")
@@ -87,19 +160,33 @@ export default function NuevoIngresoPage() {
       const tipoFuente = mode === "api" ? "API_ERP" : "MANUAL"
       const docExterno = await DocumentoExternoService.buscar(searchQuery, tipoFuente)
 
+      // DEBUG: Ver estructura de la respuesta
+      console.log("Respuesta de la API:", docExterno)
+      console.log("Items:", docExterno.items)
+
+      // Validar que items exista y sea un array
+      if (!docExterno.items || !Array.isArray(docExterno.items)) {
+        toast.error("El documento no contiene detalles de productos")
+        setIsSearching(false)
+        return
+      }
+
       // Map backend response to frontend items
-      const mappedItems: IngresoItem[] = docExterno.detalles.map((d, index) => ({
+      const mappedItems: IngresoItem[] = docExterno.items.map((d, index) => ({
         id: `gen-${Date.now()}-${index}`,
-        producto: d.cod_item,
+        producto: d.codItem,
         descripcion: d.descripcion,
         cantidad: Number(d.cantidad),
         lote: d.lote || "",
-        vencimiento: d.fecha_vencimiento ? d.fecha_vencimiento.split("T")[0] : "",
+        vencimiento: d.fechaVencimiento ? d.fechaVencimiento.split("T")[0] : "",
       }))
 
       setFoundItems(mappedItems)
+      // Seleccionar todos los items por defecto
+      setSelectedItemIds(new Set(mappedItems.map(item => item.id)))
       setFoundDocInfo({
-        doc: docExterno.numero_documento,
+        id: docExterno.id,
+        doc: docExterno.nroDocumento,
         origen: docExterno.proveedor
       })
       toast.success("Documento encontrado")
@@ -113,9 +200,37 @@ export default function NuevoIngresoPage() {
     setIsSearching(false)
   }
 
+  // Funciones para manejar selección de items
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItemIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId)
+      } else {
+        newSet.add(itemId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedItemIds.size === foundItems.length) {
+      setSelectedItemIds(new Set())
+    } else {
+      setSelectedItemIds(new Set(foundItems.map(item => item.id)))
+    }
+  }
+
+  const selectedItems = foundItems.filter(item => selectedItemIds.has(item.id))
+
   const handleSubmit = async () => {
     if (!foundDocInfo || foundItems.length === 0) {
       toast.error("Debe buscar y encontrar un documento válido primero")
+      return
+    }
+
+    if (selectedItems.length === 0) {
+      toast.error("Debe seleccionar al menos un producto")
       return
     }
 
@@ -133,7 +248,8 @@ export default function NuevoIngresoPage() {
         nroDocumento: foundDocInfo.doc,
         origen: providerName,
         almacenId: Number(almacenId),
-        detalles: foundItems.map(item => ({
+        sourceDocId: foundDocInfo.id,
+        detalles: selectedItems.map(item => ({
           productoId: item.producto,
           cantidad: item.cantidad,
           lote: item.lote,
@@ -147,7 +263,19 @@ export default function NuevoIngresoPage() {
       toast.success("Recepción Confirmada - Orden Generada (PALETIZADO)")
       router.push("/ingresos")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error al registrar ingreso")
+      const errorMessage = error instanceof Error ? error.message : "Error al registrar ingreso"
+
+      // Detectar si es un error de documento duplicado
+      if (errorMessage.toLowerCase().includes("duplicado") ||
+        errorMessage.toLowerCase().includes("duplicate") ||
+        errorMessage.toLowerCase().includes("ya existe") ||
+        errorMessage.toLowerCase().includes("already exists")) {
+        // Mostrar modal de error duplicado
+        setDuplicateErrorMessage(errorMessage)
+        setShowDuplicateError(true)
+      } else {
+        toast.error(errorMessage)
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -202,16 +330,60 @@ export default function NuevoIngresoPage() {
                 </Select>
               </div>
 
-              {/* Search Input - Compact */}
+              {/* Search Input with Autocomplete */}
               <div className="relative flex-1 w-full">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5 z-10" />
+                {isLoadingSuggestions && (
+                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5 animate-spin" />
+                )}
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setShowSuggestions(false)
+                      handleSearch()
+                    }
+                    if (e.key === "Escape") {
+                      setShowSuggestions(false)
+                    }
+                  }}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                   placeholder={mode === "api" ? "Ej: SAP-2024-001" : "Ej: INT-2024-001"}
                   className="pl-8 h-8 text-xs bg-background border-primary/30 focus-visible:ring-primary/50 shadow-inner w-full"
                 />
+
+                {/* Dropdown de sugerencias */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {suggestions.map((doc) => (
+                      <div
+                        key={doc.id}
+                        onClick={() => handleSelectSuggestion(doc)}
+                        className="px-3 py-2 hover:bg-primary/10 cursor-pointer border-b border-border/50 last:border-b-0 transition-colors"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-sm text-foreground">{doc.nroDocumento}</span>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                            {doc.tipoFuente === "API_ERP" ? "API" : "Manual"}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-center mt-0.5">
+                          <span className="text-[10px] text-muted-foreground truncate">{doc.proveedor}</span>
+                          <span className="text-[10px] text-muted-foreground">{doc.items?.length || 0} items</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Overlay para cerrar sugerencias al hacer clic fuera */}
+                {showSuggestions && (
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowSuggestions(false)}
+                  />
+                )}
               </div>
 
               {/* Action Button - Compact */}
@@ -261,31 +433,59 @@ export default function NuevoIngresoPage() {
                   Productos Encontrados
                 </CardTitle>
                 <div className="flex items-center gap-3">
+                  {/* Botón Seleccionar/Deseleccionar Todos */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleSelectAll}
+                    className="h-5 px-2 text-[10px] hover:bg-green-500/10"
+                  >
+                    {selectedItemIds.size === foundItems.length ? "Deseleccionar Todos" : "Seleccionar Todos"}
+                  </Button>
                   <Badge variant="outline" className="bg-background/50 text-[10px] h-5 px-2">
                     {foundDocInfo?.doc}
                   </Badge>
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-green-200 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-full">
-                    {foundItems.length} ITEMS
+                    {selectedItemIds.size}/{foundItems.length} SELECCIONADOS
                   </span>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-2">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-                {foundItems.map((item) => (
-                  <div key={item.id} className="flex flex-col p-2 rounded bg-background/80 border border-border/50 hover:border-green-500/30 transition-colors shadow-sm">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="bg-secondary px-1.5 rounded text-[10px] font-mono text-muted-foreground">{item.producto}</span>
-                      <span className="text-sm font-bold text-foreground">{item.cantidad} <span className="text-[10px] font-normal text-muted-foreground">Und</span></span>
+                {foundItems.map((item) => {
+                  const isSelected = selectedItemIds.has(item.id)
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => toggleItemSelection(item.id)}
+                      className={cn(
+                        "flex flex-col p-2 rounded bg-background/80 border transition-all shadow-sm cursor-pointer",
+                        isSelected
+                          ? "border-green-500/50 hover:border-green-500"
+                          : "border-border/30 opacity-50 hover:opacity-75"
+                      )}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleItemSelection(item.id)}
+                            className="h-4 w-4"
+                          />
+                          <span className="bg-secondary px-1.5 rounded text-[10px] font-mono text-muted-foreground">{item.producto}</span>
+                        </div>
+                        <span className="text-sm font-bold text-foreground">{item.cantidad} <span className="text-[10px] font-normal text-muted-foreground">Und</span></span>
+                      </div>
+                      <p className="font-medium text-foreground text-xs line-clamp-1 mb-1 ml-6" title={item.descripcion}>{item.descripcion}</p>
+                      <div className="flex gap-2 text-[10px] text-muted-foreground mt-auto ml-6">
+                        <span className="truncate">L: <span className="text-foreground">{item.lote}</span></span>
+                        <span>•</span>
+                        <span className="truncate">V: <span className="text-foreground">{item.vencimiento}</span></span>
+                      </div>
                     </div>
-                    <p className="font-medium text-foreground text-xs line-clamp-1 mb-1" title={item.descripcion}>{item.descripcion}</p>
-                    <div className="flex gap-2 text-[10px] text-muted-foreground mt-auto">
-                      <span className="truncate">L: <span className="text-foreground">{item.lote}</span></span>
-                      <span>•</span>
-                      <span className="truncate">V: <span className="text-foreground">{item.vencimiento}</span></span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
@@ -361,6 +561,45 @@ export default function NuevoIngresoPage() {
         </Card>
 
       </div>
+
+      {/* Modal de Error - Documento Duplicado */}
+      <Dialog open={showDuplicateError} onOpenChange={setShowDuplicateError}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-red-600 dark:text-red-400">
+                  Documento Duplicado
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground">
+                  No se puede crear la nota de ingreso
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+              <p className="text-sm text-red-700 dark:text-red-300">
+                {duplicateErrorMessage}
+              </p>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Por favor, verifique el número de documento o consulte la nota de ingreso existente en el listado.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowDuplicateError(false)}
+              className="w-full sm:w-auto"
+            >
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   )
 }

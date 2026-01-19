@@ -2,5 +2,5 @@
   "version": 3,
   "sources": [],
   "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/Administrador/Documents/almacenes/wms_des/Frontend/app/ingresos/nuevo/layout.tsx"],"sourcesContent":["import type React from \"react\"\r\nimport { Suspense } from \"react\"\r\n\r\nexport default function Layout({ children }: { children: React.ReactNode }) {\r\n  return <Suspense fallback={null}>{children}</Suspense>\r\n}\r\n"],"names":[],"mappings":";;;;;AACA;;;AAEe,SAAS,OAAO,EAAE,QAAQ,EAAiC;IACxE,qBAAO,6VAAC,gUAAQ;QAAC,UAAU;kBAAO;;;;;;AACpC"}}]
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/user/Documents/GitHub/wms_des/Frontend/app/ingresos/nuevo/layout.tsx"],"sourcesContent":["import type React from \"react\"\r\nimport { Suspense } from \"react\"\r\n\r\nexport default function Layout({ children }: { children: React.ReactNode }) {\r\n  return <Suspense fallback={null}>{children}</Suspense>\r\n}\r\n"],"names":[],"mappings":";;;;;AACA;;;AAEe,SAAS,OAAO,EAAE,QAAQ,EAAiC;IACxE,qBAAO,6VAAC,gUAAQ;QAAC,UAAU;kBAAO;;;;;;AACpC"}}]
 }
