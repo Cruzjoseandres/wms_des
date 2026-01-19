@@ -17,6 +17,7 @@
   "/configuracion/page": "app/configuracion/page.js",
   "/etiquetado/page": "app/etiquetado/page.js",
   "/ingresos/masivo/page": "app/ingresos/masivo/page.js",
+  "/ingresos/mobile-scanner/page": "app/ingresos/mobile-scanner/page.js",
   "/ingresos/nuevo/page": "app/ingresos/nuevo/page.js",
   "/ingresos/page": "app/ingresos/page.js",
   "/ingresos/registro/page": "app/ingresos/registro/page.js",

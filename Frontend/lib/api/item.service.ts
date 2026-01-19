@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3001/item";
+import { API_ENDPOINTS } from "./config";
 
 export interface ItemBackend {
     id: number;
@@ -8,6 +8,7 @@ export interface ItemBackend {
     precio?: number;
     codSubcategoria?: string;
     estado: number;
+    stock?: number;
 }
 
 export const ItemService = {
@@ -15,7 +16,7 @@ export const ItemService = {
      * Obtiene todos los items del catálogo
      */
     async getAll(): Promise<ItemBackend[]> {
-        const res = await fetch(API_URL, {
+        const res = await fetch(API_ENDPOINTS.item, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -34,8 +35,17 @@ export const ItemService = {
      * Obtiene un item por ID
      */
     async getById(id: number): Promise<ItemBackend> {
-        const res = await fetch(`${API_URL}/${id}`);
+        const res = await fetch(`${API_ENDPOINTS.item}/${id}`);
         if (!res.ok) throw new Error("Item no encontrado");
+        return await res.json();
+    },
+
+    /**
+     * Busca items por código
+     */
+    async searchByCode(codigo: string): Promise<ItemBackend[]> {
+        const res = await fetch(`${API_ENDPOINTS.item}/search?q=${encodeURIComponent(codigo)}`);
+        if (!res.ok) throw new Error("Error al buscar items");
         return await res.json();
     },
 };

@@ -4,6 +4,7 @@ import { DetalleIngreso } from '../../detalle_ingreso/entities/detalle_ingreso.e
 @Entity('item')
 export class Item {
   @PrimaryGeneratedColumn()
+  // Trigger Sync
   id: number;
 
   @Column({ name: 'codigo', unique: true, length: 40 })
@@ -24,6 +25,9 @@ export class Item {
 
   @Column({ name: 'estado', type: 'smallint', default: 1 })
   estado: number;
+
+  @Column({ name: 'stock', type: 'decimal', precision: 12, scale: 2, default: 0 })
+  stock: number;
 
   @CreateDateColumn({ name: 'created_at', select: false })
   createdAt: Date;

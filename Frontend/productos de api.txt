@@ -1,0 +1,4 @@
+SAP-2024-001	Farmacéuticos (Paracetamol, Ibuprofeno, Omeprazol)
+SAP-2024-002	Electrónicos (Cables USB, Cargadores)
+SAP-2024-003	Alimentos (Leche, Aceite, Arroz, Atún)
+SAP-2024-004

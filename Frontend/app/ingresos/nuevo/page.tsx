@@ -6,16 +6,17 @@ import { MainLayout } from "@/components/layout/main-layout"
 import { PageHeader } from "@/components/shared/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { useIngresosStore, type IngresoTipo, type IngresoItem } from "@/lib/stores/ingresos-store"
-import { Plus, Trash2, Search, Loader2 } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { useIngresosStore, type IngresoItem } from "@/lib/stores/ingresos-store"
+import { Search, Loader2, CheckCircle2, AlertCircle, CalendarDays } from "lucide-react"
 import { toast } from "sonner"
-import { ItemService, type ItemBackend } from "@/lib/api/item.service"
 import { AlmacenService, type AlmacenBackend } from "@/lib/api/almacen.service"
+import { cn } from "@/lib/utils"
 
 // Mock API products (para tab externo)
 const MOCK_API_DOCS: Record<string, IngresoItem[]> = {
@@ -23,7 +24,7 @@ const MOCK_API_DOCS: Record<string, IngresoItem[]> = {
     {
       id: "i1",
       producto: "PRD-001",
-      descripcion: "Producto Premium A",
+      descripcion: "Semilla Soja Premium Variety A",
       cantidad: 100,
       lote: "L2025-100",
       vencimiento: "2026-06-30",
@@ -31,7 +32,7 @@ const MOCK_API_DOCS: Record<string, IngresoItem[]> = {
     {
       id: "i2",
       producto: "PRD-002",
-      descripcion: "Producto Premium B",
+      descripcion: "Fertilizante NPK 10-10-10",
       cantidad: 50,
       lote: "L2025-101",
       vencimiento: "2026-12-31",
@@ -41,7 +42,7 @@ const MOCK_API_DOCS: Record<string, IngresoItem[]> = {
     {
       id: "i3",
       producto: "PRD-003",
-      descripcion: "Producto Estándar C",
+      descripcion: "Herbicida Glifosato Standard",
       cantidad: 200,
       lote: "L2025-102",
       vencimiento: "2025-12-15",
@@ -49,428 +50,353 @@ const MOCK_API_DOCS: Record<string, IngresoItem[]> = {
   ],
 }
 
+// Mock Internal products (para tab manual/interno)
+const MOCK_INTERNAL_DOCS: Record<string, IngresoItem[]> = {
+  "INT-2024-001": [
+    {
+      id: "m1",
+      producto: "PRD-LOCAL-01",
+      descripcion: "Maíz Híbrido Nacional",
+      cantidad: 500,
+      lote: "L-INT-001",
+      vencimiento: "2025-10-20",
+    }
+  ]
+}
+
 export default function NuevoIngresoPage() {
   const router = useRouter()
   const createIngresoBackend = useIngresosStore((s) => s.createIngresoBackend)
 
-  // Datos del catálogo cargados desde el backend
-  const [catalogItems, setCatalogItems] = useState<ItemBackend[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenBackend[]>([])
-  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true)
+  const [isLoadingAlmacenes, setIsLoadingAlmacenes] = useState(true)
 
-  const [tab, setTab] = useState<"manual" | "externo">("manual")
-  const [tipo, setTipo] = useState<IngresoTipo>("produccion")
-  const [origen, setOrigen] = useState("")
-  const [nroDocumento, setNroDocumento] = useState("")
+  // Form States
+  const [mode, setMode] = useState<"internal" | "api">("api") // Default to API per instructions if desired, or manual
+  const [searchQuery, setSearchQuery] = useState("")
+  const [tipoIngreso, setTipoIngreso] = useState("Ingreso de Produccion")
+  const [isSearching, setIsSearching] = useState(false)
+
+  const [foundItems, setFoundItems] = useState<IngresoItem[]>([])
+  const [foundDocInfo, setFoundDocInfo] = useState<{ doc: string, origen: string } | null>(null)
+
   const [almacenId, setAlmacenId] = useState<string>("")
   const [observaciones, setObservaciones] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [items, setItems] = useState<IngresoItem[]>([
-    { id: "1", producto: "", descripcion: "", cantidad: 0, lote: "", vencimiento: "" },
-  ])
+  const [fechaInicio, setFechaInicio] = useState("")
+  const [fechaFin, setFechaFin] = useState("")
 
-  // Cargar catálogo de items y almacenes al montar
+  // Provider Switch Logic
+  const [allowWithoutProvider, setAllowWithoutProvider] = useState(false)
+  const [proveedorManual, setProveedorManual] = useState("")
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Cargar almacenes y fechas al montar
   useEffect(() => {
-    const loadCatalog = async () => {
-      setIsLoadingCatalog(true)
+    // Set default dates
+    const now = new Date();
+    const nowString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    setFechaInicio(nowString);
+    setFechaFin(nowString);
+
+    const loadData = async () => {
+      setIsLoadingAlmacenes(true)
       try {
-        const [itemsData, almacenesData] = await Promise.all([
-          ItemService.getAll(),
-          AlmacenService.getAll(),
-        ])
-        setCatalogItems(itemsData)
-        setAlmacenes(almacenesData)
-        // Seleccionar primer almacén por defecto
-        if (almacenesData.length > 0) {
-          setAlmacenId(String(almacenesData[0].id))
-        }
+        const data = await AlmacenService.getAll()
+        setAlmacenes(data)
+        if (data.length > 0) setAlmacenId(String(data[0].id))
       } catch (error) {
-        toast.error("Error al cargar el catálogo de productos")
-        console.error(error)
+        toast.error("Error al cargar almacenes")
       } finally {
-        setIsLoadingCatalog(false)
+        setIsLoadingAlmacenes(false)
       }
     }
-    loadCatalog()
+    loadData()
   }, [])
 
-  // Externo (Mock API)
-  const [docSearch, setDocSearch] = useState("")
-  const [isSearching, setIsSearching] = useState(false)
-  const [apiItems, setApiItems] = useState<IngresoItem[]>([])
-  const [apiFound, setApiFound] = useState(false)
-
-  const handleSearchApi = async () => {
-    setIsSearching(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    if (MOCK_API_DOCS[docSearch]) {
-      setApiItems(MOCK_API_DOCS[docSearch])
-      setApiFound(true)
-    } else {
-      setApiItems([])
-      setApiFound(false)
-      toast.error("Documento no encontrado en sistema externo")
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      toast.error("Ingrese un número de documento para buscar")
+      return
     }
+
+    setIsSearching(true)
+    setFoundItems([])
+    setFoundDocInfo(null)
+
+    // Simulate API delay
+    await new Promise(r => setTimeout(r, 1000))
+
+    let result: IngresoItem[] | undefined
+
+    if (mode === "api") {
+      result = MOCK_API_DOCS[searchQuery]
+    } else {
+      // Internal Mode - simulates searching "external_source_docs"
+      result = MOCK_INTERNAL_DOCS[searchQuery]
+    }
+
+    if (result) {
+      setFoundItems(result)
+      setFoundDocInfo({
+        doc: searchQuery,
+        origen: mode === "api" ? "Proveedor Externo API" : "Base Interna SGLA"
+      })
+      toast.success("Documento encontrado")
+    } else {
+      toast.error("Documento no encontrado. Verifique el número o cambie de modo.")
+    }
+
     setIsSearching(false)
   }
 
-  const handleAddItemManual = () => {
-    setItems([
-      ...items,
-      { id: String(Date.now()), producto: "", descripcion: "", cantidad: 0, lote: "", vencimiento: "" },
-    ])
-  }
-
-  const handleRemoveItem = (id: string) => {
-    if (items.length > 1) {
-      setItems(items.filter((i) => i.id !== id))
-    }
-  }
-
-  const handleUpdateItem = (id: string, field: keyof IngresoItem, value: string | number) => {
-    setItems(items.map((i) => (i.id === id ? { ...i, [field]: value } : i)))
-  }
-
   const handleSubmit = async () => {
-    const itemsToSave = tab === "externo" ? apiItems : items
-
-    if (!origen || !nroDocumento || !almacenId || itemsToSave.length === 0) {
-      toast.error("Complete todos los campos requeridos (documento, origen, almacén y productos)")
+    if (!foundDocInfo || foundItems.length === 0) {
+      toast.error("Debe buscar y encontrar un documento válido primero")
       return
     }
 
-    // Validar que los items tengan producto y cantidad
-    const invalidItems = itemsToSave.filter(i => !i.producto || i.cantidad <= 0)
-    if (invalidItems.length > 0) {
-      toast.error("Todos los productos deben tener código y cantidad mayor a 0")
+    if (!almacenId) {
+      toast.error("Seleccione un almacén de destino")
       return
     }
+
+    // Determine Provider Name
+    const providerName = allowWithoutProvider ? (proveedorManual || "Sin Proveedor") : foundDocInfo.origen
 
     setIsSubmitting(true)
     try {
       await createIngresoBackend({
-        nroDocumento,
-        origen,
+        nroDocumento: foundDocInfo.doc,
+        origen: providerName,
         almacenId: Number(almacenId),
-        detalles: itemsToSave.map(item => ({
+        detalles: foundItems.map(item => ({
           productoId: item.producto,
           cantidad: item.cantidad,
-          lote: item.lote || undefined,
-          fechaVencimiento: item.vencimiento || undefined,
+          lote: item.lote,
+          fechaVencimiento: item.vencimiento,
         })),
+        usuario: 'WEB',
+        fechaInicio,
+        fechaFin,
       })
-      toast.success("Ingreso registrado correctamente")
+
+      toast.success("Recepción Confirmada - Orden Generada (PALETIZADO)")
       router.push("/ingresos")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error al registrar el ingreso")
+      toast.error(error instanceof Error ? error.message : "Error al registrar ingreso")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-
   return (
     <MainLayout>
-      <PageHeader title="Registrar Nuevo Ingreso" description="Agregue un nuevo ingreso al almacén" />
+      <PageHeader title="Recepción de Mercancía" description="Busque documentos de origen para generar órdenes de ingreso." />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Información del Ingreso</CardTitle>
-              <CardDescription>Datos generales del ingreso</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoadingCatalog ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  <span className="ml-2 text-muted-foreground">Cargando catálogo...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nro. Documento *</Label>
-                      <Input
-                        value={nroDocumento}
-                        onChange={(e) => setNroDocumento(e.target.value)}
-                        placeholder="Ej: ING-2025-001"
-                        className="bg-secondary border-border"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Origen/Proveedor *</Label>
-                      <Input
-                        value={origen}
-                        onChange={(e) => setOrigen(e.target.value)}
-                        placeholder="Ej: Proveedor ABC"
-                        className="bg-secondary border-border"
-                      />
-                    </div>
-                  </div>
+      <div className="flex flex-col gap-2 animate-in fade-in duration-500">
 
-                  <div className="space-y-2">
-                    <Label>Almacén Destino *</Label>
-                    <Select value={almacenId} onValueChange={setAlmacenId}>
-                      <SelectTrigger className="bg-secondary border-border">
-                        <SelectValue placeholder="Seleccione un almacén" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {almacenes.map((alm) => (
-                          <SelectItem key={alm.id} value={String(alm.id)}>
-                            {alm.codigo} - {alm.descripcion}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {almacenes.length === 0 && (
-                      <p className="text-xs text-red-400">No hay almacenes disponibles. Cree uno primero.</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Observaciones</Label>
-                    <Textarea
-                      value={observaciones}
-                      onChange={(e) => setObservaciones(e.target.value)}
-                      placeholder="Notas adicionales..."
-                      className="bg-secondary border-border"
-                      rows={2}
-                    />
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Tabs: Manual vs Externo */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Detalle de Productos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={tab} onValueChange={(v) => setTab(v as "manual" | "externo")}>
-                <TabsList className="grid w-full grid-cols-2 bg-secondary">
-                  <TabsTrigger value="manual">Manual (SGLA)</TabsTrigger>
-                  <TabsTrigger value="externo">Importar Externo (API)</TabsTrigger>
+        {/* Search & Config Section */}
+        <Card className="border-primary/20 bg-card/50 backdrop-blur-sm shadow-md">
+          <CardHeader className="py-2 px-3 pb-0 border-b border-border/40">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Search className="w-4 h-4 text-primary" />
+                Búsqueda de Documento
+              </CardTitle>
+              {/* Mode Switch Tabs - Moved to Header */}
+              <Tabs value={mode} onValueChange={(v) => {
+                setMode(v as "internal" | "api")
+                setFoundItems([])
+                setFoundDocInfo(null)
+              }} className="w-[300px]">
+                <TabsList className="grid w-full grid-cols-2 h-7">
+                  <TabsTrigger value="internal" className="text-xs h-5 px-2">Manual</TabsTrigger>
+                  <TabsTrigger value="api" className="text-xs h-5 px-2">API ERP</TabsTrigger>
                 </TabsList>
-
-                {/* Manual Tab */}
-                <TabsContent value="manual" className="space-y-4 mt-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <Label>Productos *</Label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={handleAddItemManual}
-                      className="bg-secondary border-border"
-                    >
-                      <Plus className="w-4 h-4 mr-1" /> Agregar
-                    </Button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {items.map((item, idx) => (
-                      <div key={item.id} className="grid grid-cols-12 gap-2 items-end p-3 bg-secondary/50 rounded-lg">
-                        <div className="col-span-4 space-y-1">
-                          <Label className="text-xs">Producto *</Label>
-                          <Select
-                            value={item.producto}
-                            onValueChange={(v) => handleUpdateItem(item.id, "producto", v)}
-                          >
-                            <SelectTrigger className="bg-secondary border-border h-9">
-                              <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {catalogItems.map((catItem) => (
-                                <SelectItem key={catItem.id} value={catItem.codigo}>
-                                  {catItem.codigo} - {catItem.descripcion}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {catalogItems.length === 0 && (
-                            <p className="text-xs text-red-400">No hay productos en el catálogo</p>
-                          )}
-                        </div>
-                        <div className="col-span-2 space-y-1">
-                          <Label className="text-xs">Cantidad</Label>
-                          <Input
-                            type="number"
-                            value={item.cantidad || ""}
-                            onChange={(e) => handleUpdateItem(item.id, "cantidad", Number(e.target.value))}
-                            className="bg-secondary border-border h-9"
-                          />
-                        </div>
-                        <div className="col-span-2 space-y-1">
-                          <Label className="text-xs">Lote</Label>
-                          <Input
-                            value={item.lote}
-                            onChange={(e) => handleUpdateItem(item.id, "lote", e.target.value)}
-                            className="bg-secondary border-border h-9"
-                          />
-                        </div>
-                        <div className="col-span-3 space-y-1">
-                          <Label className="text-xs">Vencimiento</Label>
-                          <Input
-                            type="date"
-                            value={item.vencimiento}
-                            onChange={(e) => handleUpdateItem(item.id, "vencimiento", e.target.value)}
-                            className="bg-secondary border-border h-9"
-                          />
-                        </div>
-                        <div className="col-span-1">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleRemoveItem(item.id)}
-                            disabled={items.length === 1}
-                            className="h-9 w-9 text-red-400 hover:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </TabsContent>
-
-                {/* Externo Tab */}
-                <TabsContent value="externo" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Buscar Documento Externo *</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={docSearch}
-                        onChange={(e) => setDocSearch(e.target.value)}
-                        placeholder="Ej: SAP-2024-001"
-                        className="bg-secondary border-border"
-                      />
-                      <Button
-                        onClick={handleSearchApi}
-                        disabled={!docSearch || isSearching}
-                        className="bg-primary text-primary-foreground"
-                      >
-                        {isSearching ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                            Buscando...
-                          </>
-                        ) : (
-                          <>
-                            <Search className="w-4 h-4 mr-1" />
-                            Buscar
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Prueba con: SAP-2024-001 o SAP-2024-002</p>
-                  </div>
-
-                  {apiFound && (
-                    <div className="p-4 bg-green-600/20 border border-green-600/50 rounded-lg">
-                      <p className="font-medium text-green-400">Documento encontrado</p>
-                      <p className="text-sm text-green-300">{apiItems.length} productos cargados</p>
-                    </div>
-                  )}
-
-                  {apiItems.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Productos del Documento</Label>
-                      <div className="space-y-2">
-                        {apiItems.map((item) => (
-                          <div key={item.id} className="p-3 bg-secondary/50 rounded-lg space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{item.producto}</span>
-                              <span className="text-sm text-muted-foreground">Cantidad: {item.cantidad}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">{item.descripcion}</p>
-                            <div className="text-xs text-muted-foreground">
-                              Lote: {item.lote} | Vencimiento: {item.vencimiento}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
               </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2 p-2">
 
-        {/* Summary */}
-        <div>
-          <Card className="bg-card border-border sticky top-24">
-            <CardHeader>
-              <CardTitle className="text-lg">Resumen</CardTitle>
+            {/* Tight Search Row */}
+            <div className="flex flex-col md:flex-row gap-2 items-center">
+              {/* Income Type Selector - Compact */}
+              <div className="w-full md:w-64">
+                <Select value={tipoIngreso} onValueChange={setTipoIngreso}>
+                  <SelectTrigger className="bg-background h-8 text-xs w-full truncate">
+                    <SelectValue placeholder="Tipo de Ingreso" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ingreso de Produccion">Producción</SelectItem>
+                    <SelectItem value="Ingreso por Traspaso">Traspaso</SelectItem>
+                    <SelectItem value="Ingreso por Importacion">Importación</SelectItem>
+                    <SelectItem value="Reingreso de Producto no Despachado">Reingreso No Desp.</SelectItem>
+                    <SelectItem value="Ingreso por Anulacion Factura con Devolucion Total">Devolución Total</SelectItem>
+                    <SelectItem value="Ingreso por Anulacion Factura con Devolucion Parcial">Devolución Parcial</SelectItem>
+                    <SelectItem value="Ingreso por Anulacion Factura con Devolucion con Cambio Producto">Cambio Producto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Search Input - Compact */}
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder={mode === "api" ? "Ej: SAP-2024-001" : "Ej: INT-2024-001"}
+                  className="pl-8 h-8 text-xs bg-background border-primary/30 focus-visible:ring-primary/50 shadow-inner w-full"
+                />
+              </div>
+
+              {/* Action Button - Compact */}
+              <Button
+                onClick={handleSearch}
+                disabled={isSearching || !searchQuery}
+                className="h-8 px-3 text-xs font-medium shadow-sm w-full md:w-auto"
+                size="sm"
+              >
+                {isSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : "BUSCAR"}
+              </Button>
+
+              {/* Provider Config - Compact Inline */}
+              <div className="flex items-center gap-2 px-2 border-l border-border/50 ml-1">
+                <Switch
+                  id="allow-provider"
+                  checked={allowWithoutProvider}
+                  onCheckedChange={setAllowWithoutProvider}
+                  className="scale-75 origin-left"
+                />
+                <Label htmlFor="allow-provider" className="text-[10px] cursor-pointer whitespace-nowrap text-muted-foreground">
+                  Modif. Prov
+                </Label>
+              </div>
+            </div>
+
+            {/* Manual Provider Input - Conditional and Compact */}
+            <div className={cn("transition-all duration-300 overflow-hidden px-1", allowWithoutProvider ? "max-h-10 opacity-100" : "max-h-0 opacity-0")}>
+              <Input
+                placeholder="Nombre del Proveedor (Manual)"
+                value={proveedorManual}
+                onChange={(e) => setProveedorManual(e.target.value)}
+                className="bg-secondary/50 h-7 text-xs"
+              />
+            </div>
+
+          </CardContent>
+        </Card>
+
+        {/* Results List - Compacted */}
+        {foundItems.length > 0 && (
+          <Card className="border-green-500/30 bg-green-500/5 shadow-sm animate-in slide-in-from-bottom-2">
+            <CardHeader className="py-2 px-3 border-b border-green-500/10 min-h-[40px]">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Productos Encontrados
+                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="bg-background/50 text-[10px] h-5 px-2">
+                    {foundDocInfo?.doc}
+                  </Badge>
+                  <span className="text-[10px] font-bold px-2 py-0.5 bg-green-200 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-full">
+                    {foundItems.length} ITEMS
+                  </span>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tipo</span>
-                  <span className="font-medium">
-                    {tipo === "produccion"
-                      ? "Producción"
-                      : tipo === "traspaso"
-                        ? "Traspaso"
-                        : tipo === "reingreso"
-                          ? "Reingreso"
-                          : "Anulación"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Origen</span>
-                  <span className="font-medium">{origen || "—"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Productos</span>
-                  <span className="font-medium">{tab === "externo" ? apiItems.length : items.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cantidad Total</span>
-                  <span className="font-medium">
-                    {(tab === "externo" ? apiItems : items).reduce((sum, i) => sum + i.cantidad, 0)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-primary/10 border border-primary/20 rounded p-3">
-                <p className="text-xs text-muted-foreground mb-2">Estado inicial</p>
-                <p className="font-medium text-primary">PALETIZADO</p>
-              </div>
-
-              <div className="space-y-2">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="w-full bg-primary text-primary-foreground"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Registrando...
-                    </>
-                  ) : (
-                    "Confirmar Recepción"
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => router.back()}
-                  disabled={isSubmitting}
-                  className="w-full bg-secondary border-border"
-                >
-                  Cancelar
-                </Button>
+            <CardContent className="p-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                {foundItems.map((item) => (
+                  <div key={item.id} className="flex flex-col p-2 rounded bg-background/80 border border-border/50 hover:border-green-500/30 transition-colors shadow-sm">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="bg-secondary px-1.5 rounded text-[10px] font-mono text-muted-foreground">{item.producto}</span>
+                      <span className="text-sm font-bold text-foreground">{item.cantidad} <span className="text-[10px] font-normal text-muted-foreground">Und</span></span>
+                    </div>
+                    <p className="font-medium text-foreground text-xs line-clamp-1 mb-1" title={item.descripcion}>{item.descripcion}</p>
+                    <div className="flex gap-2 text-[10px] text-muted-foreground mt-auto">
+                      <span className="truncate">L: <span className="text-foreground">{item.lote}</span></span>
+                      <span>•</span>
+                      <span className="truncate">V: <span className="text-foreground">{item.vencimiento}</span></span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        </div>
+        )}
+
+        {/* Confirmation Section - Ultra Compact */}
+        <Card className="border-l-2 border-l-primary shadow-md">
+          <CardContent className="p-2">
+            <div className="flex flex-col md:flex-row gap-3 items-end">
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 flex-1">
+                {/* Almacen */}
+                <div className="space-y-0.5">
+                  <Label className="text-[10px] text-muted-foreground">Almacén Destino</Label>
+                  <Select value={almacenId} onValueChange={setAlmacenId}>
+                    <SelectTrigger disabled={isLoadingAlmacenes} className="bg-background h-8 text-xs">
+                      <SelectValue placeholder="Seleccione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {almacenes.map(alm => (
+                        <SelectItem key={alm.id} value={String(alm.id)} className="text-xs">{alm.descripcion}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Dates */}
+                <div className="space-y-0.5">
+                  <Label className="text-[10px] text-muted-foreground">Inicio</Label>
+                  <Input
+                    type="datetime-local"
+                    value={fechaInicio}
+                    onChange={(e) => setFechaInicio(e.target.value)}
+                    className="bg-background text-[10px] h-8 px-1"
+                  />
+                </div>
+                <div className="space-y-0.5">
+                  <Label className="text-[10px] text-muted-foreground">Fin</Label>
+                  <Input
+                    type="datetime-local"
+                    value={fechaFin}
+                    onChange={(e) => setFechaFin(e.target.value)}
+                    className="bg-background text-[10px] h-8 px-1"
+                  />
+                </div>
+
+                {/* Observation */}
+                <div className="space-y-0.5">
+                  <Label className="text-[10px] text-muted-foreground">Notas</Label>
+                  <Input
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
+                    placeholder="Opcional..."
+                    className="h-8 text-xs bg-background"
+                  />
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="md:w-auto shrink-0 flex flex-col items-center">
+                <span className="text-[9px] font-semibold text-primary mb-0.5 tracking-wider">PALETIZADO</span>
+                <Button
+                  className="w-full md:w-auto text-xs font-bold h-8 px-6 shadow-md transition-all uppercase tracking-wide"
+                  onClick={handleSubmit}
+                  disabled={foundItems.length === 0 || isSubmitting}
+                >
+                  {isSubmitting ? <Loader2 className="mr-1 w-3 h-3 animate-spin" /> : "Confirmar"}
+                </Button>
+              </div>
+
+            </div>
+          </CardContent>
+        </Card>
+
       </div>
     </MainLayout>
   )

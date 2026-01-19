@@ -123,7 +123,7 @@ export function KPICards() {
         : defaultClientKpis
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 h-full">
+    <>
       {kpis.map((kpi) => (
         <Card key={kpi.label} className={cn("bg-card border transition-colors hover:bg-muted/50", kpi.borderColor)}>
           <CardContent className="p-4 sm:p-5 h-full flex flex-col justify-between">
@@ -154,11 +154,11 @@ export function KPICards() {
             </div>
             <div className="mt-3 sm:mt-4">
               <p className="text-xs sm:text-sm text-muted-foreground">{kpi.label}</p>
-              <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">{kpi.value}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1 tracking-tight truncate" title={kpi.value}>{kpi.value}</p>
             </div>
           </CardContent>
         </Card>
       ))}
-    </div>
+    </>
   )
 }

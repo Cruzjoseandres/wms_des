@@ -1,0 +1,12 @@
+{
+    "version": 2,
+    "framework": "nextjs",
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "regions": [
+        "pdx1"
+    ],
+    "env": {
+        "NEXT_PUBLIC_APP_VERSION": "2.0.0"
+    }
+}

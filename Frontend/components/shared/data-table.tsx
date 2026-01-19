@@ -23,6 +23,7 @@ interface DataTableProps<T> {
   onEdit?: (item: T) => void
   onDelete?: (item: T) => void
   showActions?: boolean
+  className?: string
 }
 
 export function DataTable<T extends { id: string | number }>({
@@ -32,6 +33,7 @@ export function DataTable<T extends { id: string | number }>({
   onEdit,
   onDelete,
   showActions = true,
+  className,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -46,7 +48,7 @@ export function DataTable<T extends { id: string | number }>({
   const paginatedData = filteredData.slice(startIndex, startIndex + rowsPerPage)
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className={cn("space-y-3 sm:space-y-4", className)}>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

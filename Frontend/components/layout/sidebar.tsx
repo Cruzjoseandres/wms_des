@@ -44,12 +44,25 @@ import {
   Sun,
   Moon,
   Monitor,
+  type LucideIcon,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { CommandPalette } from "@/components/layout/command-palette"
 
-const clientMenuItems = [
+interface SubMenuItem {
+  title: string
+  href: string
+}
+
+interface MenuItem {
+  title: string
+  icon: LucideIcon
+  href: string
+  submenu?: SubMenuItem[]
+}
+
+const clientMenuItems: MenuItem[] = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
@@ -135,7 +148,7 @@ const clientMenuItems = [
   },
 ]
 
-const superAdminMenuItems = [
+const superAdminMenuItems: MenuItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, href: "/super-admin" },
   { title: "Tenants", icon: Users, href: "/super-admin/companies" },
   { title: "Usuarios Globales", icon: Users, href: "/super-admin/users" },
@@ -183,8 +196,8 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50",
-          "h-screen",
+          "flex flex-col fixed left-0 top-0 z-50 h-screen",
+          "bg-gradient-to-b from-sidebar via-sidebar/95 to-sidebar/90 border-r border-sidebar-border/50 backdrop-blur-xl",
           "transition-all duration-300 ease-in-out",
           // Desktop: show as collapsed or expanded with smooth width transition
           sidebarCollapsed ? "lg:w-20" : "lg:w-72",
@@ -193,16 +206,16 @@ export function Sidebar() {
         )}
       >
         {/* Logo and collapse button */}
-        <div className="p-4 border-b border-sidebar-border flex items-center justify-between gap-3 shrink-0 h-16">
+        <div className="p-4 border-b border-sidebar-border/50 flex items-center justify-between gap-3 shrink-0 h-20 bg-sidebar-accent/5">
           <div className="flex items-center gap-3 overflow-hidden min-w-0">
             <div
               className={cn(
-                "rounded-lg bg-gradient-to-br from-orange-500 via-slate-600 to-slate-800 flex items-center justify-center shrink-0",
-                "transition-all duration-300 ease-in-out",
-                "w-10 h-10 shadow-lg shadow-orange-500/20",
+                "rounded-xl bg-gradient-to-br from-primary via-orange-500 to-orange-600 flex items-center justify-center shrink-0",
+                "transition-all duration-300 ease-in-out shadow-lg shadow-orange-500/20",
+                "w-10 h-10",
               )}
             >
-              <PackageSearch className="w-5 h-5 text-white" />
+              <PackageSearch className="w-6 h-6 text-white" />
             </div>
             <div
               className={cn(
@@ -210,11 +223,11 @@ export function Sidebar() {
                 sidebarCollapsed ? "lg:opacity-0 lg:scale-90 lg:w-0" : "opacity-100 scale-100 w-auto",
               )}
             >
-              <h1 className="text-[11px] font-bold text-sidebar-foreground whitespace-nowrap leading-tight tracking-wider">
-                CADENA LOGÍSTICA
+              <h1 className="text-[11px] font-bold text-sidebar-foreground/80 whitespace-nowrap leading-tight tracking-wider uppercase">
+                Logística Integral
               </h1>
-              <p className="text-xl font-black text-orange-500 whitespace-nowrap leading-none tracking-tighter italic">
-                SGLA
+              <p className="text-xl font-black text-primary whitespace-nowrap leading-none tracking-tighter">
+                SGLA WMS
               </p>
             </div>
           </div>
@@ -251,16 +264,22 @@ export function Sidebar() {
                   <div>
                     {!sidebarCollapsed && (
                       <>
-                        <div className="flex items-center">
+                        <div className="flex items-center relative">
+                          {isActive(item.submenu[0].href) && (
+                            <div className="absolute left-0 w-1 h-8 bg-primary rounded-r-full" />
+                          )}
                           <Link
                             href={item.submenu[0].href}
                             className={cn(
-                              "flex-1 flex items-center gap-3 px-3 py-2.5 rounded-l-lg transition-all duration-200",
-                              "hover:bg-sidebar-accent hover:pl-4",
-                              isActive(item.href) ? "bg-sidebar-accent text-primary" : "text-sidebar-foreground",
+                              "flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group mx-2",
+                              "hover:bg-sidebar-accent hover:translate-x-1 hover:shadow-sm",
+                              isActive(item.href) ? "bg-primary/10 text-primary" : "text-sidebar-foreground",
                             )}
                           >
-                            <item.icon className="w-5 h-5 shrink-0" />
+                            <item.icon className={cn(
+                              "w-5 h-5 shrink-0 transition-transform duration-200",
+                              "group-hover:scale-110 group-hover:rotate-3"
+                            )} />
                             <span className="flex-1 text-left text-sm font-medium truncate transition-opacity duration-200">
                               {item.title}
                             </span>
@@ -268,9 +287,9 @@ export function Sidebar() {
                           <button
                             onClick={() => toggleMenu(item.title)}
                             className={cn(
-                              "px-2 py-2.5 rounded-r-lg transition-all duration-200",
+                              "p-2 rounded-lg transition-all duration-200 mr-2",
                               "hover:bg-sidebar-accent",
-                              isActive(item.href) ? "bg-sidebar-accent text-primary" : "text-sidebar-foreground",
+                              isActive(item.href) ? "text-primary" : "text-sidebar-foreground",
                             )}
                           >
                             <div
@@ -285,17 +304,20 @@ export function Sidebar() {
                         </div>
 
                         {openMenus.includes(item.title) && (
-                          <ul className="mt-1 ml-8 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                          <ul className="mt-1 ml-4 space-y-1 animate-in slide-in-from-top-2 duration-200 border-l border-sidebar-border/50 pl-2">
                             {item.submenu.map((sub) => (
                               <li key={sub.href}>
                                 <Link
                                   href={sub.href}
                                   className={cn(
-                                    "block px-3 py-2 rounded-lg text-sm transition-all duration-200 truncate",
-                                    "hover:bg-sidebar-accent hover:pl-4",
-                                    pathname === sub.href ? "bg-primary/20 text-primary" : "text-muted-foreground",
+                                    "block px-3 py-2 rounded-lg text-sm transition-all duration-200 truncate relative",
+                                    "hover:bg-sidebar-accent hover:pl-4 hover:text-primary",
+                                    pathname === sub.href ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground",
                                   )}
                                 >
+                                  {pathname === sub.href && (
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-r-full" />
+                                  )}
                                   {sub.title}
                                 </Link>
                               </li>

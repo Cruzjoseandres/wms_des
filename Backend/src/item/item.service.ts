@@ -10,10 +10,12 @@ export class ItemService {
   constructor(
     @InjectRepository(Item)
     private readonly itemRepository: Repository<Item>,
-  ) {}
+  ) { }
   async create(createItemDto: CreateItemDto) {
     return await this.itemRepository.save(createItemDto);
   }
+
+
 
   async findAll() {
     return await this.itemRepository.find();
@@ -31,6 +33,21 @@ export class ItemService {
     return await this.itemRepository.delete(id);
   }
 
+  async findOneByCode(codigo: string) {
+    return await this.itemRepository.findOneBy({ codigo });
+  }
+
+  async increaseStock(id: number, amount: number) {
+    const item = await this.findOne(id);
+    if (!item) return;
+
+    // Convert string/number issues if any, though typeorm handles decimal as string often
+    const currentStock = Number(item.stock) || 0;
+    const increment = Number(amount) || 0;
+
+    item.stock = currentStock + increment;
+    return await this.itemRepository.save(item);
+  }
 
 
   /**

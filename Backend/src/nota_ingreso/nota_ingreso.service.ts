@@ -5,10 +5,11 @@ import { UpdateEstadoDto } from './dto/update-estado.dto';
 
 import { AlmacenService } from '../almacen/almacen.service';
 import { ItemService } from '../item/item.service';
-import { NotaIngreso } from './entities/nota_ingreso.entity';
+import { NotaIngreso, EstadoIngreso } from './entities/nota_ingreso.entity';
 import { DetalleIngreso } from '../detalle_ingreso/entities/detalle_ingreso.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { HistorialEstadoService } from '../historial_estado/historial_estado.service';
 
 @Injectable()
 export class NotaIngresoService {
@@ -17,33 +18,64 @@ export class NotaIngresoService {
     private readonly notaRepo: Repository<NotaIngreso>,
     private readonly almacenService: AlmacenService,
     private readonly itemService: ItemService,
+    private readonly historialEstadoService: HistorialEstadoService,
   ) { }
+
   async create(dto: CreateNotaIngresoDto) {
-    // 1. Validar Almacén
+    // 1. Validar que no exista duplicado
+    const existing = await this.notaRepo.findOneBy({ nroDocumento: dto.nroDocumento });
+    if (existing) {
+      throw new BadRequestException(`Ya existe una nota de ingreso con el número ${dto.nroDocumento}`);
+    }
+
+    // 2. Validar Almacén
     const almacen = await this.almacenService.findOne(dto.almacenId);
 
-    // 2. Validar Items (los códigos deben existir en el catálogo)
+    // 3. Validar Items (los códigos deben existir en el catálogo) - OPCIONAL durante desarrollo
     const listaCodigos = dto.detalles.map((d) => d.productoId);
-    await this.itemService.validarExistencia(listaCodigos);
+    // await this.itemService.validarExistencia(listaCodigos); // Comentado para desarrollo
 
-    // 3. Crear la Nota con cascade (TypeORM guardará automáticamente los detalles)
+    // 4. Crear la Nota con cascade
     const nuevaNota = this.notaRepo.create({
       nroDocumento: dto.nroDocumento,
       origen: dto.origen,
       fechaIngreso: new Date(),
-      usuario: 'WEB',
-      estado: 0,
+      fechaInicio: dto.fechaInicio ? new Date(dto.fechaInicio) : undefined,
+      fechaFin: dto.fechaFin ? new Date(dto.fechaFin) : undefined,
+      usuarioCreacion: dto.usuario || 'WEB',
+      estado: EstadoIngreso.PALETIZADO,
       almacen: almacen,
       detalles: dto.detalles.map((d) => ({
         codItem: d.productoId,
         cantidad: d.cantidad,
+        cantidadEsperada: d.cantidad, // Inicialmente esperada = recibida
         lote: d.lote,
         fechaVencimiento: d.fechaVencimiento ? new Date(d.fechaVencimiento) : undefined,
         serie: d.serie,
+        productCodes: d.productCodes || null,
       })) as DetalleIngreso[],
     });
 
-    return await this.notaRepo.save(nuevaNota);
+    const savedNota = await this.notaRepo.save(nuevaNota);
+
+    // 5. Registrar en historial de estados
+    await this.historialEstadoService.registrarCambio({
+      notaIngresoId: savedNota.id,
+      estadoAnterior: -1, // Nuevo
+      estadoNuevo: EstadoIngreso.PALETIZADO,
+      usuario: dto.usuario || 'WEB',
+      motivo: 'Creación de orden de ingreso',
+    });
+
+    // 6. Actualizar Stock (solo si validación está activa)
+    for (const detalle of dto.detalles) {
+      const item = await this.itemService.findOneByCode(detalle.productoId);
+      if (item) {
+        await this.itemService.increaseStock(item.id, detalle.cantidad);
+      }
+    }
+
+    return savedNota;
   }
 
   async findAll() {

@@ -99,7 +99,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "C:\\Users\\Jose\\Desktop\\wms_des\\Frontend",
+    "outputFileTracingRoot": "C:\\Users\\Jose\\Desktop\\wms_des\\sgla-wms\\Frontend",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -289,11 +289,11 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.mjs",
     "turbopack": {
-      "root": "C:\\Users\\Jose\\Desktop\\wms_des\\Frontend"
+      "root": "C:\\Users\\Jose\\Desktop\\wms_des\\sgla-wms\\Frontend"
     },
     "distDirRoot": ".next"
   },
-  "appDir": "C:\\Users\\Jose\\Desktop\\wms_des\\Frontend",
+  "appDir": "C:\\Users\\Jose\\Desktop\\wms_des\\sgla-wms\\Frontend",
   "relativeAppDir": "",
   "files": [
     ".next\\routes-manifest.json",

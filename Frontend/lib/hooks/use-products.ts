@@ -2,8 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ProductFormData } from "@/lib/schemas/product.schema"
+import { ItemService, type ItemBackend } from "@/lib/api/item.service"
 
-// Tipos
+// Tipos reflejando el frontend, mapeados desde el backend
 export interface Product {
   id: string
   sku: string
@@ -32,27 +33,27 @@ interface ProductsResponse {
   pageSize: number
 }
 
-// Datos mock para demo (hasta conectar con backend real)
-const MOCK_PRODUCTS: Product[] = Array.from({ length: 100 }, (_, i) => ({
-  id: `prod-${i + 1}`,
-  sku: `SKU-${String(i + 1).padStart(4, "0")}`,
-  name: `Producto ${i + 1}`,
-  description: `Descripción del producto ${i + 1}`,
-  categoryId: `cat-${(i % 4) + 1}`,
-  categoryName: ["Electrónicos", "Alimentos", "Textiles", "Químicos"][i % 4],
-  unit: ["UND", "KG", "LT", "CJ"][i % 4],
-  barcode: `750${String(i + 1).padStart(10, "0")}`,
+// Mapper helper
+const mapItemToProduct = (item: ItemBackend): Product => ({
+  id: String(item.id),
+  sku: item.codigo,
+  name: item.descripcion,
+  description: item.descripcion,
+  categoryId: item.codSubcategoria || "general",
+  categoryName: "General", // Placeholder
+  unit: item.unidadMedida || "UND",
+  barcode: item.codigo, // Usamos código como barcode por ahora
   minStock: 10,
-  maxStock: 100,
-  currentStock: Math.floor(Math.random() * 150),
-  cost: Math.floor(Math.random() * 100) + 10,
-  price: Math.floor(Math.random() * 200) + 50,
-  isActive: Math.random() > 0.1,
-  requiresLot: Math.random() > 0.7,
-  requiresExpiration: Math.random() > 0.8,
-  createdAt: new Date(Date.now() - Math.random() * 10000000000).toISOString(),
+  maxStock: 1000,
+  currentStock: Number(item.stock) || 0,
+  cost: 0,
+  price: Number(item.precio) || 0,
+  isActive: item.estado === 1,
+  requiresLot: true, // Default
+  requiresExpiration: true, // Default
+  createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
-}))
+})
 
 // Query keys
 export const productKeys = {
@@ -68,10 +69,11 @@ export function useProducts(filters?: { search?: string; categoryId?: string; is
   return useQuery({
     queryKey: productKeys.list(filters || {}),
     queryFn: async () => {
-      // Simular latencia de red
-      await new Promise((r) => setTimeout(r, 300))
+      // Fetch real data
+      const items = await ItemService.getAll()
 
-      let filtered = [...MOCK_PRODUCTS]
+      // Client-side filtering (since backend might not support it yet)
+      let filtered = items.map(mapItemToProduct)
 
       if (filters?.search) {
         const searchLower = filters.search.toLowerCase()
@@ -79,12 +81,8 @@ export function useProducts(filters?: { search?: string; categoryId?: string; is
           (p) =>
             p.name.toLowerCase().includes(searchLower) ||
             p.sku.toLowerCase().includes(searchLower) ||
-            p.barcode?.includes(searchLower),
+            (p.barcode && p.barcode.includes(searchLower)),
         )
-      }
-
-      if (filters?.categoryId) {
-        filtered = filtered.filter((p) => p.categoryId === filters.categoryId)
       }
 
       if (filters?.isActive !== undefined) {
@@ -98,7 +96,8 @@ export function useProducts(filters?: { search?: string; categoryId?: string; is
         pageSize: filtered.length,
       } as ProductsResponse
     },
-    staleTime: 30 * 1000, // 30 segundos
+    // Mantener datos frescos por 30 segundos
+    staleTime: 30 * 1000,
   })
 }
 
@@ -106,8 +105,13 @@ export function useProduct(id: string) {
   return useQuery({
     queryKey: productKeys.detail(id),
     queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 200))
-      return MOCK_PRODUCTS.find((p) => p.id === id) || null
+      // Try to fetch specific item, handle mismatch of string/number id
+      try {
+        const item = await ItemService.getById(Number(id))
+        return mapItemToProduct(item)
+      } catch (e) {
+        return null
+      }
     },
     enabled: !!id,
   })
@@ -118,24 +122,11 @@ export function useCreateProduct() {
 
   return useMutation({
     mutationFn: async (data: ProductFormData) => {
-      // Simular llamada API
-      await new Promise((r) => setTimeout(r, 500))
-
-      const newProduct: Product = {
-        id: `prod-${Date.now()}`,
-        ...data,
-        currentStock: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-
-      // Agregar a mock data
-      MOCK_PRODUCTS.unshift(newProduct)
-
-      return newProduct
+      // TODO: Implement create in ItemService and backend
+      // Por ahora lanzamos error o simulamos
+      throw new Error("Creación de producto no implementada en backend aún")
     },
     onSuccess: () => {
-      // Invalidar queries para refrescar listas
       queryClient.invalidateQueries({ queryKey: productKeys.lists() })
     },
   })
@@ -146,41 +137,10 @@ export function useUpdateProduct() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ProductFormData> }) => {
-      await new Promise((r) => setTimeout(r, 500))
-
-      const index = MOCK_PRODUCTS.findIndex((p) => p.id === id)
-      if (index === -1) throw new Error("Producto no encontrado")
-
-      MOCK_PRODUCTS[index] = {
-        ...MOCK_PRODUCTS[index],
-        ...data,
-        updatedAt: new Date().toISOString(),
-      }
-
-      return MOCK_PRODUCTS[index]
-    },
-    onMutate: async ({ id, data }) => {
-      // Cancelar queries en curso
-      await queryClient.cancelQueries({ queryKey: productKeys.detail(id) })
-
-      // Guardar estado anterior
-      const previousProduct = queryClient.getQueryData(productKeys.detail(id))
-
-      // Optimistic update
-      queryClient.setQueryData(productKeys.detail(id), (old: Product | undefined) =>
-        old ? { ...old, ...data } : undefined,
-      )
-
-      return { previousProduct }
-    },
-    onError: (err, { id }, context) => {
-      // Revertir en caso de error
-      if (context?.previousProduct) {
-        queryClient.setQueryData(productKeys.detail(id), context.previousProduct)
-      }
+      // TODO: Implement update in ItemService
+      throw new Error("Actualización no disponible")
     },
     onSettled: (_, __, { id }) => {
-      // Refrescar datos
       queryClient.invalidateQueries({ queryKey: productKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: productKeys.lists() })
     },
@@ -192,41 +152,12 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await new Promise((r) => setTimeout(r, 300))
-
-      const index = MOCK_PRODUCTS.findIndex((p) => p.id === id)
-      if (index === -1) throw new Error("Producto no encontrado")
-
-      MOCK_PRODUCTS.splice(index, 1)
-      return { success: true }
-    },
-    onMutate: async (id) => {
-      // Cancelar queries
-      await queryClient.cancelQueries({ queryKey: productKeys.lists() })
-
-      // Guardar estado anterior
-      const previousProducts = queryClient.getQueryData(productKeys.lists())
-
-      // Optimistic delete - remover de la lista inmediatamente
-      queryClient.setQueryData(productKeys.list({}), (old: ProductsResponse | undefined) => {
-        if (!old) return old
-        return {
-          ...old,
-          data: old.data.filter((p) => p.id !== id),
-          total: old.total - 1,
-        }
-      })
-
-      return { previousProducts }
-    },
-    onError: (err, id, context) => {
-      // Revertir en caso de error
-      if (context?.previousProducts) {
-        queryClient.setQueryData(productKeys.lists(), context.previousProducts)
-      }
+      // TODO: Implement delete in ItemService
+      throw new Error("Eliminación no disponible")
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: productKeys.lists() })
     },
   })
 }
+

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { PageHeader } from "@/components/shared/page-header"
 import { Button } from "@/components/ui/button"
@@ -22,7 +22,12 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  Loader2,
 } from "lucide-react"
+import { ItemService, type ItemBackend } from "@/lib/api/item.service"
+import { AlmacenService, type AlmacenBackend } from "@/lib/api/almacen.service"
+import { InventarioService } from "@/lib/api/inventario.service"
+import { toast } from "sonner"
 
 interface Inventario {
   id: string
@@ -39,7 +44,8 @@ interface Inventario {
   responsable: string
 }
 
-const inventariosData: Inventario[] = [
+// Initial mock data is kept but will be augmented with real data logic
+const initialInventariosData: Inventario[] = [
   {
     id: "1",
     codigo: "INV-2025-001",
@@ -81,18 +87,91 @@ const inventariosData: Inventario[] = [
 ]
 
 export default function GestionInventarioPage() {
-  const [inventarios, setInventarios] = useState<Inventario[]>(inventariosData)
+  // Real Data State
+  const [inventarios, setInventarios] = useState<Inventario[]>([])
   const [showNewModal, setShowNewModal] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
   const [selectedInventario, setSelectedInventario] = useState<Inventario | null>(null)
   const [filterEstado, setFilterEstado] = useState<string>("all")
 
+  const [products, setProducts] = useState<ItemBackend[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenBackend[]>([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
+
   const [newInventario, setNewInventario] = useState({
     tipo: "General" as "General" | "Parcial",
-    almacen: "",
+    almacenId: "",
     bodega: "",
     responsable: "",
   })
+
+  // Mock Data for "Disconnected" mode
+  const mockProducts: ItemBackend[] = [
+    { id: 1, codigo: "PROD-001", descripcion: "Producto Ejemplo 1", stock: 100, precio: 10, categoria: "General" } as any
+  ]
+  const mockAlmacenes: AlmacenBackend[] = [
+    { id: 1, codigo: "WH-01", descripcion: "PT9 NUEVO CEDIS", ubicacion: "Central" } as any
+  ]
+
+  // Load backend data - DISCONNECTED (Mock Mode)
+  const loadInventarios = async () => {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500))
+    setInventarios(initialInventariosData)
+    // Original Backend Call commented out:
+    /*
+    try {
+      const data = await InventarioService.getAll()
+      const mapped: Inventario[] = data.map(i => ({
+        id: String(i.id),
+        codigo: i.codigo,
+        tipo: i.tipo as "General" | "Parcial",
+        estado: i.estado as "Abierto" | "En Proceso" | "Cerrado",
+        fechaApertura: i.fechaApertura,
+        fechaCierre: i.fechaCierre || undefined,
+        almacen: `${i.almacen.codigo} - ${i.almacen.descripcion}`,
+        bodega: i.bodega || undefined,
+        itemsContados: i.itemsContados,
+        itemsTotales: i.itemsTotales,
+        diferencias: i.diferencias,
+        responsable: i.responsable
+      }))
+      setInventarios(mapped)
+    } catch (error) {
+      console.error(error)
+      toast.error("Error al cargar inventarios")
+    }
+    */
+  }
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoadingData(true)
+      try {
+        // Disconnected from GETs
+        /*
+        const [itemsData, almacenesData] = await Promise.all([
+          ItemService.getAll(),
+          AlmacenService.getAll()
+        ])
+        setProducts(itemsData)
+        setAlmacenes(almacenesData)
+        */
+
+        // Use Mocks
+        setProducts(mockProducts)
+        setAlmacenes(mockAlmacenes)
+
+        await loadInventarios()
+      } catch (error) {
+        console.error(error)
+        toast.error("Error al cargar datos del sistema")
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const inventariosAbiertos = inventarios.filter((i) => i.estado === "Abierto").length
   const inventariosEnProceso = inventarios.filter((i) => i.estado === "En Proceso").length
@@ -103,35 +182,55 @@ export default function GestionInventarioPage() {
     return true
   })
 
-  const handleCreateInventario = () => {
-    const newInv: Inventario = {
-      id: Date.now().toString(),
-      codigo: `INV-2025-${String(inventarios.length + 1).padStart(3, "0")}`,
-      tipo: newInventario.tipo,
-      estado: "Abierto",
-      fechaApertura: new Date().toISOString().split("T")[0],
-      almacen: newInventario.almacen,
-      bodega: newInventario.tipo === "Parcial" ? newInventario.bodega : undefined,
-      itemsContados: 0,
-      itemsTotales: newInventario.tipo === "General" ? 1765 : 320,
-      diferencias: 0,
-      responsable: newInventario.responsable,
+  const handleCreateInventario = async () => {
+    // Find selected warehouse name
+    const selectedAlmacen = almacenes.find(a => String(a.id) === newInventario.almacenId)
+    // Calculate total items based on real DB products
+    const calculatedTotal = newInventario.tipo === "General" ? products.length : Math.max(1, Math.floor(products.length * 0.2))
+
+    try {
+      await InventarioService.create({
+        codigo: `INV-2025-${String(inventarios.length + 1).padStart(3, "0")}`, // Logic could be moved to backend
+        tipo: newInventario.tipo,
+        fechaApertura: new Date().toISOString().split("T")[0],
+        almacenId: Number(newInventario.almacenId),
+        bodega: newInventario.tipo === "Parcial" ? newInventario.bodega : undefined,
+        responsable: newInventario.responsable,
+        itemsTotales: calculatedTotal,
+      })
+
+      await loadInventarios()
+      setShowNewModal(false)
+      setNewInventario({ tipo: "General", almacenId: "", bodega: "", responsable: "" })
+      toast.success("Inventario creado correctamente")
+    } catch (e) {
+      toast.error("Error al crear inventario")
     }
-    setInventarios([newInv, ...inventarios])
-    setShowNewModal(false)
-    setNewInventario({ tipo: "General", almacen: "", bodega: "", responsable: "" })
   }
 
-  const handleCerrarInventario = (inv: Inventario) => {
-    setInventarios(
-      inventarios.map((i) =>
-        i.id === inv.id ? { ...i, estado: "Cerrado" as const, fechaCierre: new Date().toISOString().split("T")[0] } : i,
-      ),
-    )
+  const handleCerrarInventario = async (inv: Inventario) => {
+    try {
+      await InventarioService.update(Number(inv.id), {
+        estado: "Cerrado",
+        fechaCierre: new Date().toISOString().split("T")[0]
+      })
+      toast.success("Inventario cerrado")
+      loadInventarios()
+    } catch (e) {
+      toast.error("Error al cerrar inventario")
+    }
   }
 
-  const handleIniciarConteo = (inv: Inventario) => {
-    setInventarios(inventarios.map((i) => (i.id === inv.id ? { ...i, estado: "En Proceso" as const } : i)))
+  const handleIniciarConteo = async (inv: Inventario) => {
+    try {
+      await InventarioService.update(Number(inv.id), {
+        estado: "En Proceso"
+      })
+      toast.success("Conteo iniciado")
+      loadInventarios()
+    } catch (e) {
+      toast.error("Error al iniciar conteo")
+    }
   }
 
   const getEstadoBadge = (estado: string) => {
@@ -157,10 +256,9 @@ export default function GestionInventarioPage() {
         <PageHeader
           title="Gestión de Inventarios"
           description="Apertura, seguimiento y cierre de inventarios"
-          icon={<ClipboardList className="h-6 w-6" />}
           actions={
-            <Button onClick={() => setShowNewModal(true)} className="bg-orange-500 hover:bg-orange-600">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={() => setShowNewModal(true)} className="bg-orange-500 hover:bg-orange-600" disabled={isLoadingData}>
+              {isLoadingData ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
               Nuevo Inventario
             </Button>
           }
@@ -379,17 +477,19 @@ export default function GestionInventarioPage() {
               <div>
                 <Label className="text-muted-foreground">Almacén</Label>
                 <Select
-                  value={newInventario.almacen}
-                  onValueChange={(v) => setNewInventario({ ...newInventario, almacen: v })}
+                  value={newInventario.almacenId}
+                  onValueChange={(v) => setNewInventario({ ...newInventario, almacenId: v })}
                 >
                   <SelectTrigger className="bg-background border-border">
                     <SelectValue placeholder="Seleccionar almacén" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PT9 NUEVO CEDIS">PT9 NUEVO CEDIS</SelectItem>
-                    <SelectItem value="PT5 CENTRAL">PT5 CENTRAL</SelectItem>
+                    {almacenes.map(alm => (
+                      <SelectItem key={alm.id} value={String(alm.id)}>{alm.codigo} - {alm.descripcion}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {almacenes.length === 0 && <p className="text-xs text-amber-500 mt-1">No hay almacenes cargados</p>}
               </div>
               {newInventario.tipo === "Parcial" && (
                 <div>
@@ -426,7 +526,7 @@ export default function GestionInventarioPage() {
               <Button
                 className="bg-orange-500 hover:bg-orange-600"
                 onClick={handleCreateInventario}
-                disabled={!newInventario.almacen || !newInventario.responsable}
+                disabled={!newInventario.almacenId || !newInventario.responsable}
               >
                 Crear Inventario
               </Button>

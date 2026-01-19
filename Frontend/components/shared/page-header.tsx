@@ -12,6 +12,8 @@ interface PageHeaderProps {
   onImport?: () => void
   onExport?: () => void
   children?: React.ReactNode
+  actions?: React.ReactNode
+  loader2?: boolean
 }
 
 export function PageHeader({
@@ -22,6 +24,8 @@ export function PageHeader({
   onImport,
   onExport,
   children,
+  actions,
+  loader2 = false,
 }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -31,6 +35,7 @@ export function PageHeader({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {children}
+        {actions}
         {onExport && (
           <Button
             variant="outline"

@@ -13,13 +13,24 @@ const estadoToNumber: Record<IngresoStatus, number> = {
   anulado: 3,
 }
 
+export interface ProductCodes {
+  barcode?: string;
+  sku?: string;
+  factoryCode?: string;
+  systemCode?: string;
+}
+
 export interface IngresoItem {
   id: string
   producto: string
   descripcion?: string
   cantidad: number
+  cantidadEsperada?: number
   lote: string
   vencimiento: string
+  productCodes?: ProductCodes | null
+  ubicacionSugerida?: string
+  ubicacionFinal?: string
 }
 
 export interface Ingreso {
@@ -34,7 +45,10 @@ export interface Ingreso {
   usuarioCreacion: string
   usuarioValidacion?: string
   usuarioAlmacenaje?: string
+  validatedAt?: string | null
+  storedAt?: string | null
   almacenId: string
+  sourceDocId?: number | null
 }
 
 interface IngresosState {
@@ -54,7 +68,7 @@ interface IngresosState {
   setSelectedAlmacen: (almacenId: string) => void
   getStatsCounts: (almacenId: string) => Record<IngresoStatus, number>
 
-  // New backend-connected actions
+  // Backend-connected actions
   createIngresoBackend: (payload: CreateIngresoPayload) => Promise<void>
   updateEstadoBackend: (ingresoId: string, nuevoEstado: IngresoStatus, usuario?: string) => Promise<void>
 }
@@ -87,10 +101,15 @@ export const useIngresosStore = create<IngresosState>()(
       fetchIngresos: async () => {
         set({ isLoading: true, error: null })
         try {
+          console.log("[Store] Fetching ingresos from backend...")
           const data = await NotaIngresoService.getAll()
+          console.log("[Store] Backend response:", data)
           const mapped = data.map(mapBackendToFrontend)
+          console.log("[Store] Mapped data:", mapped)
           set({ ingresos: mapped as Ingreso[], isLoading: false })
+          console.log("[Store] State updated with", mapped.length, "ingresos")
         } catch (error) {
+          console.error("[Store] Error fetching ingresos:", error)
           set({
             error: error instanceof Error ? error.message : "Error al cargar ingresos",
             isLoading: false
@@ -107,7 +126,7 @@ export const useIngresosStore = create<IngresosState>()(
       simulateValidation: (ingresoId, operadorName) => {
         set((state) => ({
           ingresos: state.ingresos.map((i) =>
-            i.id === ingresoId ? { ...i, estado: "validado", usuarioValidacion: operadorName } : i,
+            i.id === ingresoId ? { ...i, estado: "validado" as const, usuarioValidacion: operadorName } : i,
           ),
         }))
       },
@@ -115,7 +134,7 @@ export const useIngresosStore = create<IngresosState>()(
       simulateAlmacenaje: (ingresoId, operadorName) => {
         set((state) => ({
           ingresos: state.ingresos.map((i) =>
-            i.id === ingresoId ? { ...i, estado: "almacenado", usuarioAlmacenaje: operadorName } : i,
+            i.id === ingresoId ? { ...i, estado: "almacenado" as const, usuarioAlmacenaje: operadorName } : i,
           ),
         }))
       },
@@ -174,8 +193,7 @@ export const useIngresosStore = create<IngresosState>()(
       },
     }),
     {
-      name: "sgla-ingresos-storage",
-    },
-  ),
+      name: "ingresos-storage",
+    }
+  )
 )
-

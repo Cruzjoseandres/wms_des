@@ -13,8 +13,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, Check, X } from "lucide-react"
+import { Plus, Trash2, Check, X, Loader2 } from "lucide-react"
 import { useDemoState } from "@/lib/hooks/use-demo-state"
+import { useIngresosStore } from "@/lib/stores/ingresos-store"
+import { toast } from "sonner"
 
 interface IngresoItem {
   id: string
@@ -24,59 +26,19 @@ interface IngresoItem {
   vencimiento: string
 }
 
-interface Ingreso {
+// Interface para la tabla de esta página
+interface IngresoRow {
   id: string
   documento: string
-  tipo: "produccion" | "traspaso" | "reingreso" | "anulacion"
+  tipo: string
   proveedor: string
   fecha: string
+  fechaInicio: string
+  fechaFin: string
   items: number
-  estado: "pendiente" | "validado" | "almacenado" | "rechazado"
+  estado: string
   observaciones: string
 }
-
-const mockIngresos: Ingreso[] = [
-  {
-    id: "1",
-    documento: "ING-2025-001",
-    tipo: "produccion",
-    proveedor: "Producción Interna",
-    fecha: "2025-01-08",
-    items: 15,
-    estado: "pendiente",
-    observaciones: "",
-  },
-  {
-    id: "2",
-    documento: "ING-2025-002",
-    tipo: "traspaso",
-    proveedor: "Almacén Central",
-    fecha: "2025-01-08",
-    items: 8,
-    estado: "validado",
-    observaciones: "",
-  },
-  {
-    id: "3",
-    documento: "ING-2025-003",
-    tipo: "produccion",
-    proveedor: "Producción Interna",
-    fecha: "2025-01-07",
-    items: 22,
-    estado: "almacenado",
-    observaciones: "",
-  },
-  {
-    id: "4",
-    documento: "ING-2025-004",
-    tipo: "reingreso",
-    proveedor: "Cliente ABC",
-    fecha: "2025-01-07",
-    items: 3,
-    estado: "rechazado",
-    observaciones: "Producto dañado",
-  },
-]
 
 const tipoLabels: Record<string, string> = {
   produccion: "Producción",
@@ -93,39 +55,71 @@ const estadoColors: Record<string, string> = {
 }
 
 export default function RegistroIngresoPage() {
-  const [ingresos, setIngresos] = useState<Ingreso[]>(mockIngresos)
+  // Conectar al store de ingresos
+  const allIngresos = useIngresosStore((s) => s.ingresos)
+  const isLoading = useIngresosStore((s) => s.isLoading)
+  const fetchIngresos = useIngresosStore((s) => s.fetchIngresos)
+  const updateEstadoBackend = useIngresosStore((s) => s.updateEstadoBackend)
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formData, setFormData] = useDemoState("registro_ingreso_form", {
-    tipo: "produccion" as Ingreso["tipo"],
+    tipo: "produccion",
     proveedor: "",
+    fechaInicio: "",
+    fechaFin: "",
     observaciones: "",
   })
   const [items, setItems] = useState<IngresoItem[]>([{ id: "1", producto: "", cantidad: 0, lote: "", vencimiento: "" }])
   const router = useRouter()
 
+  // Cargar datos del backend al montar
   useEffect(() => {
-    router.replace("/ingresos")
-  }, [router])
+    fetchIngresos()
+  }, [fetchIngresos])
+
+  // Mapear datos del store al formato de la tabla
+  const ingresos: IngresoRow[] = allIngresos.map((ing) => ({
+    id: ing.id,
+    documento: ing.documento,
+    tipo: ing.tipo,
+    proveedor: ing.origen,
+    fecha: ing.fecha,
+    fechaInicio: ing.validatedAt || "",
+    fechaFin: ing.storedAt || "",
+    items: Array.isArray(ing.items) ? ing.items.length : 0,
+    estado: ing.estado === "paletizado" ? "pendiente" : ing.estado === "anulado" ? "rechazado" : ing.estado,
+    observaciones: ing.observaciones,
+  }))
 
   const columns = [
     { key: "documento", label: "Documento" },
     {
       key: "tipo",
       label: "Tipo",
-      render: (item: Ingreso) => <span>{tipoLabels[item.tipo]}</span>,
+      render: (item: IngresoRow) => <span>{tipoLabels[item.tipo] || item.tipo}</span>,
     },
     { key: "proveedor", label: "Origen" },
     { key: "fecha", label: "Fecha" },
+    {
+      key: "rango",
+      label: "Rango Horario",
+      render: (item: IngresoRow) => (
+        <span className="text-xs text-muted-foreground">
+          {item.fechaInicio ? new Date(item.fechaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'} -
+          {item.fechaFin ? new Date(item.fechaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
+        </span>
+      )
+    },
     { key: "items", label: "Ítems" },
     {
       key: "estado",
       label: "Estado",
-      render: (item: Ingreso) => <Badge className={estadoColors[item.estado]}>{item.estado.toUpperCase()}</Badge>,
+      render: (item: IngresoRow) => <Badge className={estadoColors[item.estado] || "bg-gray-600"}>{item.estado.toUpperCase()}</Badge>,
     },
     {
       key: "acciones",
       label: "Acciones",
-      render: (item: Ingreso) =>
+      render: (item: IngresoRow) =>
         item.estado === "pendiente" ? (
           <div className="flex gap-2">
             <Button
@@ -149,18 +143,26 @@ export default function RegistroIngresoPage() {
     },
   ]
 
-  const handleValidar = (ingreso: Ingreso) => {
-    setIngresos(ingresos.map((i) => (i.id === ingreso.id ? { ...i, estado: "validado" } : i)))
+  const handleValidar = async (ingreso: IngresoRow) => {
+    try {
+      await updateEstadoBackend(ingreso.id, "validado", "Usuario Web")
+      toast.success("Ingreso validado correctamente")
+    } catch (error) {
+      toast.error("Error al validar el ingreso")
+    }
   }
 
-  const handleRechazar = (ingreso: Ingreso) => {
-    setIngresos(ingresos.map((i) => (i.id === ingreso.id ? { ...i, estado: "rechazado" } : i)))
+  const handleRechazar = async (ingreso: IngresoRow) => {
+    try {
+      await updateEstadoBackend(ingreso.id, "anulado", "Usuario Web")
+      toast.success("Ingreso rechazado")
+    } catch (error) {
+      toast.error("Error al rechazar el ingreso")
+    }
   }
 
   const handleNew = () => {
-    setFormData({ tipo: "produccion", proveedor: "", observaciones: "" })
-    setItems([{ id: "1", producto: "", cantidad: 0, lote: "", vencimiento: "" }])
-    setIsModalOpen(true)
+    router.push("/ingresos/nuevo")
   }
 
   const addItem = () => {
@@ -183,7 +185,9 @@ export default function RegistroIngresoPage() {
       documento: `ING-2025-${String(ingresos.length + 1).padStart(3, "0")}`,
       tipo: formData.tipo,
       proveedor: formData.proveedor,
-      fecha: new Date().toISOString().split("T")[0],
+      fecha: formData.fechaInicio.split("T")[0], // Use start date as main date
+      fechaInicio: formData.fechaInicio,
+      fechaFin: formData.fechaFin,
       items: items.length,
       estado: "pendiente",
       observaciones: formData.observaciones,
@@ -275,6 +279,27 @@ export default function RegistroIngresoPage() {
               <Input
                 value={formData.proveedor}
                 onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
+                className="bg-secondary border-border"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Fecha Inicio *</Label>
+              <Input
+                type="datetime-local"
+                value={formData.fechaInicio}
+                onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Fecha Fin *</Label>
+              <Input
+                type="datetime-local"
+                value={formData.fechaFin}
+                onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
                 className="bg-secondary border-border"
               />
             </div>

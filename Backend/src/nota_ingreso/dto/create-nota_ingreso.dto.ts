@@ -3,10 +3,11 @@ import {
   IsArray,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { CreateDetalleIngresoDto } from 'src/detalle_ingreso/dto/create-detalle_ingreso.dto';
+import { CreateDetalleIngresoDto } from '../../detalle_ingreso/dto/create-detalle_ingreso.dto';
 
 export class CreateNotaIngresoDto {
   @IsString()
@@ -18,11 +19,29 @@ export class CreateNotaIngresoDto {
   origen: string;
 
   @IsNumber({}, { message: 'El ID de almacén debe ser un número' })
-  @Type(() => Number) // Convierte "1" (string) a 1 (number) si viene del form
+  @Type(() => Number)
   almacenId: number;
 
+  @IsString()
+  @IsOptional()
+  usuario?: string; // Usuario que crea la orden
+
+  @IsNumber()
+  @IsOptional()
+  sourceDocId?: number; // ID del documento de origen si aplica
+
+  // Rango de recepción programado
+  @IsOptional()
+  @IsString()
+  fechaInicio?: string;
+
+  @IsOptional()
+  @IsString()
+  fechaFin?: string;
+
   @IsArray({ message: 'Debe enviar una lista de detalles' })
-  @ValidateNested({ each: true }) // Valida cada objeto dentro del array
-  @Type(() => CreateDetalleIngresoDto) // Convierte el JSON a instancias de la clase CreateDetalleIngresoDto
+  @ValidateNested({ each: true })
+  @Type(() => CreateDetalleIngresoDto)
   detalles: CreateDetalleIngresoDto[];
 }
+

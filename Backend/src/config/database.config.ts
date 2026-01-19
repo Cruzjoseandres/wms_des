@@ -3,6 +3,11 @@ import { Almacen } from '../almacen/entities/almacen.entity';
 import { DetalleIngreso } from '../detalle_ingreso/entities/detalle_ingreso.entity';
 import { Item } from '../item/entities/item.entity';
 import { NotaIngreso } from '../nota_ingreso/entities/nota_ingreso.entity';
+import { Inventario } from '../inventario/entities/inventario.entity';
+import { DocumentoOrigen } from '../documento_origen/entities/documento_origen.entity';
+import { ItemDocumentoOrigen } from '../item_documento_origen/entities/item_documento_origen.entity';
+import { StockInventario } from '../stock_inventario/entities/stock_inventario.entity';
+import { HistorialEstado } from '../historial_estado/entities/historial_estado.entity';
 import 'dotenv/config';
 
 export const typeOrmConfig: TypeOrmModuleOptions = {
@@ -12,9 +17,18 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
-  entities: [Almacen, NotaIngreso, DetalleIngreso, Item],
+  entities: [
+    Almacen,
+    NotaIngreso,
+    DetalleIngreso,
+    Item,
+    Inventario,
+    DocumentoOrigen,
+    ItemDocumentoOrigen,
+    StockInventario,
+    HistorialEstado,
+  ],
   synchronize: process.env.DB_SYNCHRONIZE === 'true',
-  // SSL solo si está habilitado en las variables de entorno
   ssl: process.env.DB_SSL === 'true' ? {
     rejectUnauthorized: false,
   } : false,

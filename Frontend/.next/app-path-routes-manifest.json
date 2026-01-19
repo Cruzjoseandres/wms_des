@@ -17,6 +17,7 @@
   "/configuracion/page": "/configuracion",
   "/etiquetado/page": "/etiquetado",
   "/ingresos/masivo/page": "/ingresos/masivo",
+  "/ingresos/mobile-scanner/page": "/ingresos/mobile-scanner",
   "/ingresos/nuevo/page": "/ingresos/nuevo",
   "/ingresos/page": "/ingresos",
   "/ingresos/registro/page": "/ingresos/registro",

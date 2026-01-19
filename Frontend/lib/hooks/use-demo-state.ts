@@ -13,7 +13,8 @@ export function useDemoState<T>(key: string, defaultValue: T): [T, (value: T) =>
 
     try {
       const saved = localStorage.getItem(`demo_${key}`)
-      return saved ? JSON.parse(saved) : defaultValue
+      if (saved === "undefined" || saved === null) return defaultValue
+      return JSON.parse(saved)
     } catch (e) {
       console.error("[v0] Error reading from localStorage:", e)
       return defaultValue

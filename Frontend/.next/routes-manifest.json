@@ -179,6 +179,12 @@
       "namedRegex": "^/ingresos/masivo(?:/)?$"
     },
     {
+      "page": "/ingresos/mobile-scanner",
+      "regex": "^/ingresos/mobile\\-scanner(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ingresos/mobile\\-scanner(?:/)?$"
+    },
+    {
       "page": "/ingresos/nuevo",
       "regex": "^/ingresos/nuevo(?:/)?$",
       "routeKeys": {},

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
 import { useDemoState } from "@/lib/hooks/use-demo-state"
+import { cn } from "@/lib/utils"
 
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, group: "Navegación" },
@@ -53,7 +54,7 @@ const navigationItems = [
   { name: "Configuración", href: "/configuracion", icon: Settings, group: "Usuario" },
 ]
 
-export function CommandPalette() {
+export function CommandPalette({ mobile }: { mobile?: boolean } = {}) {
   const [open, setOpen] = React.useState(false)
   const router = useRouter()
   const [lastSearch, setLastSearch] = useDemoState("header_last_search", "")
@@ -90,7 +91,10 @@ export function CommandPalette() {
     <>
       <Button
         variant="outline"
-        className="relative h-9 w-full justify-start rounded-lg bg-muted/50 text-sm text-muted-foreground hover:bg-muted sm:w-64 lg:w-96"
+        className={cn(
+          "relative h-9 w-full justify-start rounded-lg bg-muted/50 text-sm text-muted-foreground hover:bg-muted",
+          mobile ? "w-full" : "sm:w-64 lg:w-96"
+        )}
         onClick={() => setOpen(true)}
       >
         <Search className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -98,9 +102,11 @@ export function CommandPalette() {
           {lastSearch ? `Última búsqueda: ${lastSearch}` : "Buscar SKU, orden #, cliente..."}
         </span>
         <span className="sm:hidden">{lastSearch || "Buscar..."}</span>
-        <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-          <span className="text-xs">⌘</span>K
-        </kbd>
+        {!mobile && (
+          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        )}
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Buscar páginas, comandos..." value={lastSearch} onValueChange={setLastSearch} />
