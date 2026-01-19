@@ -18,51 +18,7 @@ import { toast } from "sonner"
 import { AlmacenService, type AlmacenBackend } from "@/lib/api/almacen.service"
 import { cn } from "@/lib/utils"
 
-// Mock API products (para tab externo)
-const MOCK_API_DOCS: Record<string, IngresoItem[]> = {
-  "SAP-2024-001": [
-    {
-      id: "i1",
-      producto: "PRD-001",
-      descripcion: "Semilla Soja Premium Variety A",
-      cantidad: 100,
-      lote: "L2025-100",
-      vencimiento: "2026-06-30",
-    },
-    {
-      id: "i2",
-      producto: "PRD-002",
-      descripcion: "Fertilizante NPK 10-10-10",
-      cantidad: 50,
-      lote: "L2025-101",
-      vencimiento: "2026-12-31",
-    },
-  ],
-  "SAP-2024-002": [
-    {
-      id: "i3",
-      producto: "PRD-003",
-      descripcion: "Herbicida Glifosato Standard",
-      cantidad: 200,
-      lote: "L2025-102",
-      vencimiento: "2025-12-15",
-    },
-  ],
-}
-
-// Mock Internal products (para tab manual/interno)
-const MOCK_INTERNAL_DOCS: Record<string, IngresoItem[]> = {
-  "INT-2024-001": [
-    {
-      id: "m1",
-      producto: "PRD-LOCAL-01",
-      descripcion: "Maíz Híbrido Nacional",
-      cantidad: 500,
-      lote: "L-INT-001",
-      vencimiento: "2025-10-20",
-    }
-  ]
-}
+import { DocumentoExternoService } from "@/lib/api/documento_externo.service"
 
 export default function NuevoIngresoPage() {
   const router = useRouter()
@@ -125,26 +81,33 @@ export default function NuevoIngresoPage() {
     setFoundDocInfo(null)
 
     // Simulate API delay
-    await new Promise(r => setTimeout(r, 1000))
+    // await new Promise(r => setTimeout(r, 1000)) // Removed delay
 
-    let result: IngresoItem[] | undefined
+    try {
+      const tipoFuente = mode === "api" ? "API_ERP" : "MANUAL"
+      const docExterno = await DocumentoExternoService.buscar(searchQuery, tipoFuente)
 
-    if (mode === "api") {
-      result = MOCK_API_DOCS[searchQuery]
-    } else {
-      // Internal Mode - simulates searching "external_source_docs"
-      result = MOCK_INTERNAL_DOCS[searchQuery]
-    }
+      // Map backend response to frontend items
+      const mappedItems: IngresoItem[] = docExterno.detalles.map((d, index) => ({
+        id: `gen-${Date.now()}-${index}`,
+        producto: d.cod_item,
+        descripcion: d.descripcion,
+        cantidad: Number(d.cantidad),
+        lote: d.lote || "",
+        vencimiento: d.fecha_vencimiento ? d.fecha_vencimiento.split("T")[0] : "",
+      }))
 
-    if (result) {
-      setFoundItems(result)
+      setFoundItems(mappedItems)
       setFoundDocInfo({
-        doc: searchQuery,
-        origen: mode === "api" ? "Proveedor Externo API" : "Base Interna SGLA"
+        doc: docExterno.numero_documento,
+        origen: docExterno.proveedor
       })
       toast.success("Documento encontrado")
-    } else {
+
+    } catch (error) {
+      console.error(error)
       toast.error("Documento no encontrado. Verifique el número o cambie de modo.")
+      setFoundItems([])
     }
 
     setIsSearching(false)

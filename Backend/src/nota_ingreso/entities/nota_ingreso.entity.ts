@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { DetalleIngreso } from '../../detalle_ingreso/entities/detalle_ingreso.entity';
 import { Almacen } from '../../almacen/entities/almacen.entity';
 
@@ -16,6 +16,19 @@ export enum EstadoIngreso {
   ANULADO = 3,
 }
 
+/**
+ * Tipos de ingreso permitidos
+ */
+export enum TipoIngreso {
+  PRODUCCION = 'produccion',
+  TRASPASO = 'traspaso',
+  IMPORTACION = 'importacion',
+  REINGRESO = 'reingreso',
+  ANULACION_TOTAL = 'anulacion_total',
+  ANULACION_PARCIAL = 'anulacion_parcial',
+  CAMBIO_PRODUCTO = 'cambio_producto',
+}
+
 @Entity('nota_ingreso')
 export class NotaIngreso {
   @PrimaryGeneratedColumn()
@@ -30,6 +43,9 @@ export class NotaIngreso {
 
   @Column({ name: 'obs_origen', length: 120, nullable: true })
   origen: string;
+
+  @Column({ name: 'tipo_ingreso', length: 30, nullable: true })
+  tipoIngreso: string; // produccion, traspaso, importacion, etc.
 
   // --- CAMPOS DE AUDITORÍA ---
   // Usa el nombre de columna existente 'usuario' para compatibilidad
@@ -73,6 +89,9 @@ export class NotaIngreso {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 
   // --- RELACIÓN CON DETALLES ---
   @OneToMany(() => DetalleIngreso, (detalle) => detalle.notaIngreso, {

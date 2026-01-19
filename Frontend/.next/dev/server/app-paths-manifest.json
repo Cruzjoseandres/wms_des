@@ -1,5 +1,5 @@
 {
   "/ingresos/nuevo/page": "app/ingresos/nuevo/page.js",
-  "/ingresos/page": "app/ingresos/page.js",
-  "/ingresos/registro/page": "app/ingresos/registro/page.js"
+  "/ingresos/registro/page": "app/ingresos/registro/page.js",
+  "/page": "app/page.js"
 }

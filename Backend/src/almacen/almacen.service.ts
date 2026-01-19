@@ -10,13 +10,15 @@ export class AlmacenService {
   constructor(
     @InjectRepository(Almacen)
     private readonly almacenRepository: Repository<Almacen>,
-  ) {}
+  ) { }
   async create(createAlmacenDto: CreateAlmacenDto) {
     return await this.almacenRepository.save(createAlmacenDto);
   }
 
   async findAll() {
-    return await this.almacenRepository.find();
+    return await this.almacenRepository.find({
+      where: { estado: 1 }, // Solo almacenes activos
+    });
   }
 
   async findOne(id: number) {

@@ -1,12 +1,12 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { DocumentoOrigenService } from './documento_origen.service';
 
-@Controller('documento-origen')
+@Controller('documentos-externos')
 export class DocumentoOrigenController {
     constructor(private readonly documentoOrigenService: DocumentoOrigenService) { }
 
     /**
-     * GET /documento-origen
+     * GET /documentos-externos
      * Obtiene todos los documentos
      */
     @Get()
@@ -15,7 +15,7 @@ export class DocumentoOrigenController {
     }
 
     /**
-     * GET /documento-origen/pendientes
+     * GET /documentos-externos/pendientes
      * Obtiene documentos pendientes de procesar
      */
     @Get('pendientes')
@@ -24,19 +24,28 @@ export class DocumentoOrigenController {
     }
 
     /**
-     * GET /documento-origen/buscar?q=SAP-2024
-     * Busca documentos por número o descripción
+     * GET /documentos-externos/buscar?numero=SAP-2024-001&tipo=API_ERP
+     * Busca documentos por número y tipo de fuente
      */
     @Get('buscar')
-    buscar(@Query('q') query: string) {
-        if (!query) {
-            return this.documentoOrigenService.obtenerPendientes();
+    buscar(
+        @Query('numero') numero: string,
+        @Query('tipo') tipo: string,
+        @Query('q') q: string,
+    ) {
+        // Si viene el parámetro numero (formato requerido por frontend)
+        if (numero) {
+            return this.documentoOrigenService.buscarPorNumeroYTipo(numero, tipo);
         }
-        return this.documentoOrigenService.buscar(query);
+        // Compatibilidad con formato anterior usando q
+        if (q) {
+            return this.documentoOrigenService.buscar(q, tipo);
+        }
+        return this.documentoOrigenService.obtenerPendientes();
     }
 
     /**
-     * GET /documento-origen/:nroDocumento
+     * GET /documentos-externos/:nroDocumento
      * Obtiene un documento específico por su número
      */
     @Get(':nroDocumento')

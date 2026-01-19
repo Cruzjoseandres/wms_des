@@ -566,10 +566,6 @@
     padding-block: 0;
   }
 
-  ::-webkit-calendar-picker-indicator {
-    line-height: 1;
-  }
-
   :-moz-ui-invalid {
     box-shadow: none;
   }
@@ -630,7 +626,7 @@
   }
 
   .sr-only {
-    clip-path: inset(50%);
+    clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border-width: 0;
     width: 1px;
@@ -2742,16 +2738,6 @@
     }
   }
 
-  .bg-muted\/20 {
-    background-color: var(--muted);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-muted\/20 {
-      background-color: color-mix(in oklab, var(--muted) 20%, transparent);
-    }
-  }
-
   .bg-muted\/30 {
     background-color: var(--muted);
   }
@@ -4239,7 +4225,7 @@
   }
 
   .transition {
-    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, visibility, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
   }

@@ -138,9 +138,31 @@ export class NotaIngresoService {
       );
     }
 
-    // 4. Actualizar el estado
+    // 4. Actualizar el estado y campos de auditoría según la transición
     nota.estado = nuevoEstado;
-    return await this.notaRepo.save(nota);
+    const usuario = dto.usuario || 'SISTEMA';
+
+    // Setear campos específicos según el nuevo estado
+    if (nuevoEstado === EstadoIngreso.VALIDADO) {
+      nota.usuarioValidacion = usuario;
+      nota.validatedAt = new Date();
+    } else if (nuevoEstado === EstadoIngreso.ALMACENADO) {
+      nota.usuarioAlmacenaje = usuario;
+      nota.storedAt = new Date();
+    }
+
+    const savedNota = await this.notaRepo.save(nota);
+
+    // 5. Registrar en historial de estados
+    await this.historialEstadoService.registrarCambio({
+      notaIngresoId: id,
+      estadoAnterior: estadoActual,
+      estadoNuevo: nuevoEstado,
+      usuario: usuario,
+      motivo: this.getMotivoCambio(nuevoEstado),
+    });
+
+    return savedNota;
   }
 
   private getEstadoNombre(estado: number): string {
@@ -151,6 +173,16 @@ export class NotaIngresoService {
       3: 'Anulado',
     };
     return nombres[estado] || 'Desconocido';
+  }
+
+  private getMotivoCambio(estado: number): string {
+    const motivos: Record<number, string> = {
+      0: 'Retorno a estado inicial',
+      1: 'Validación completada',
+      2: 'Almacenamiento completado',
+      3: 'Orden anulada',
+    };
+    return motivos[estado] || 'Cambio de estado';
   }
 }
 

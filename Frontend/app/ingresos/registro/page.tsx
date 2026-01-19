@@ -1,30 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layout/main-layout"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
-import { FormModal } from "@/components/shared/form-modal"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, Check, X, Loader2 } from "lucide-react"
-import { useDemoState } from "@/lib/hooks/use-demo-state"
+import { Check, X, Loader2 } from "lucide-react"
 import { useIngresosStore } from "@/lib/stores/ingresos-store"
 import { toast } from "sonner"
-
-interface IngresoItem {
-  id: string
-  producto: string
-  cantidad: number
-  lote: string
-  vencimiento: string
-}
 
 // Interface para la tabla de esta página
 interface IngresoRow {
@@ -61,15 +47,6 @@ export default function RegistroIngresoPage() {
   const fetchIngresos = useIngresosStore((s) => s.fetchIngresos)
   const updateEstadoBackend = useIngresosStore((s) => s.updateEstadoBackend)
 
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [formData, setFormData] = useDemoState("registro_ingreso_form", {
-    tipo: "produccion",
-    proveedor: "",
-    fechaInicio: "",
-    fechaFin: "",
-    observaciones: "",
-  })
-  const [items, setItems] = useState<IngresoItem[]>([{ id: "1", producto: "", cantidad: 0, lote: "", vencimiento: "" }])
   const router = useRouter()
 
   // Cargar datos del backend al montar
@@ -165,37 +142,6 @@ export default function RegistroIngresoPage() {
     router.push("/ingresos/nuevo")
   }
 
-  const addItem = () => {
-    setItems([...items, { id: String(Date.now()), producto: "", cantidad: 0, lote: "", vencimiento: "" }])
-  }
-
-  const removeItem = (id: string) => {
-    if (items.length > 1) {
-      setItems(items.filter((i) => i.id !== id))
-    }
-  }
-
-  const updateItem = (id: string, field: keyof IngresoItem, value: string | number) => {
-    setItems(items.map((i) => (i.id === id ? { ...i, [field]: value } : i)))
-  }
-
-  const handleSubmit = () => {
-    const newIngreso: Ingreso = {
-      id: String(Date.now()),
-      documento: `ING-2025-${String(ingresos.length + 1).padStart(3, "0")}`,
-      tipo: formData.tipo,
-      proveedor: formData.proveedor,
-      fecha: formData.fechaInicio.split("T")[0], // Use start date as main date
-      fechaInicio: formData.fechaInicio,
-      fechaFin: formData.fechaFin,
-      items: items.length,
-      estado: "pendiente",
-      observaciones: formData.observaciones,
-    }
-    setIngresos([newIngreso, ...ingresos])
-    setIsModalOpen(false)
-  }
-
   return (
     <MainLayout>
       <PageHeader
@@ -247,147 +193,11 @@ export default function RegistroIngresoPage() {
 
       <DataTable data={ingresos} columns={columns} showActions={false} />
 
-      <FormModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Nuevo Ingreso"
-        description="Registre un nuevo ingreso de productos"
-        onSubmit={handleSubmit}
-        submitLabel="Confirmar Recepción"
-      >
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Tipo de Ingreso *</Label>
-              <Select
-                value={formData.tipo}
-                onValueChange={(v) => setFormData({ ...formData, tipo: v as Ingreso["tipo"] })}
-              >
-                <SelectTrigger className="bg-secondary border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="produccion">Producción</SelectItem>
-                  <SelectItem value="traspaso">Traspaso</SelectItem>
-                  <SelectItem value="reingreso">Reingreso</SelectItem>
-                  <SelectItem value="anulacion">Anulación Factura</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Origen/Proveedor *</Label>
-              <Input
-                value={formData.proveedor}
-                onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
-                className="bg-secondary border-border"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Fecha Inicio *</Label>
-              <Input
-                type="datetime-local"
-                value={formData.fechaInicio}
-                onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
-                className="bg-secondary border-border"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Fecha Fin *</Label>
-              <Input
-                type="datetime-local"
-                value={formData.fechaFin}
-                onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
-                className="bg-secondary border-border"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Detalle de Ítems</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={addItem}
-                className="bg-secondary border-border"
-              >
-                <Plus className="w-4 h-4 mr-1" /> Agregar
-              </Button>
-            </div>
-            <div className="space-y-3">
-              {items.map((item, idx) => (
-                <div key={item.id} className="grid grid-cols-12 gap-2 items-end p-3 bg-secondary/50 rounded-lg">
-                  <div className="col-span-4 space-y-1">
-                    <Label className="text-xs">Producto</Label>
-                    <Select value={item.producto} onValueChange={(v) => updateItem(item.id, "producto", v)}>
-                      <SelectTrigger className="bg-secondary border-border h-9">
-                        <SelectValue placeholder="Seleccionar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PRD-001">PRD-001 - Producto A</SelectItem>
-                        <SelectItem value="PRD-002">PRD-002 - Producto B</SelectItem>
-                        <SelectItem value="PRD-003">PRD-003 - Producto C</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2 space-y-1">
-                    <Label className="text-xs">Cantidad</Label>
-                    <Input
-                      type="number"
-                      value={item.cantidad || ""}
-                      onChange={(e) => updateItem(item.id, "cantidad", Number(e.target.value))}
-                      className="bg-secondary border-border h-9"
-                    />
-                  </div>
-                  <div className="col-span-2 space-y-1">
-                    <Label className="text-xs">Lote</Label>
-                    <Input
-                      value={item.lote}
-                      onChange={(e) => updateItem(item.id, "lote", e.target.value)}
-                      className="bg-secondary border-border h-9"
-                    />
-                  </div>
-                  <div className="col-span-3 space-y-1">
-                    <Label className="text-xs">Vencimiento</Label>
-                    <Input
-                      type="date"
-                      value={item.vencimiento}
-                      onChange={(e) => updateItem(item.id, "vencimiento", e.target.value)}
-                      className="bg-secondary border-border h-9"
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeItem(item.id)}
-                      disabled={items.length === 1}
-                      className="h-9 w-9 text-red-400 hover:text-red-300"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Observaciones</Label>
-            <Textarea
-              value={formData.observaciones}
-              onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
-              className="bg-secondary border-border"
-              rows={2}
-            />
-          </div>
+      {isLoading && (
+        <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-50">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </FormModal>
+      )}
     </MainLayout>
   )
 }

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DocumentoOrigen } from './entities/documento_origen.entity';
+import { DocumentoOrigen, TipoFuente } from './entities/documento_origen.entity';
 
 @Injectable()
 export class DocumentoOrigenService {
@@ -11,7 +11,25 @@ export class DocumentoOrigenService {
     ) { }
 
     /**
-     * Busca un documento por su número (ej: SAP-2024-001)
+     * Busca un documento por su número y tipo de fuente
+     * GET /documentos-externos/buscar?numero=SAP-2024-001&tipo=API_ERP
+     */
+    async buscarPorNumeroYTipo(numero: string, tipo?: string): Promise<DocumentoOrigen | null> {
+        const query = this.documentoRepo
+            .createQueryBuilder('doc')
+            .leftJoinAndSelect('doc.items', 'items')
+            .where('doc.nroDocumento ILIKE :numero', { numero: `%${numero}%` })
+            .andWhere('doc.estado = :estado', { estado: 'pendiente' });
+
+        if (tipo) {
+            query.andWhere('doc.tipoFuente = :tipo', { tipo });
+        }
+
+        return await query.getOne();
+    }
+
+    /**
+     * Busca un documento por su número exacto
      */
     async buscarPorNumero(nroDocumento: string): Promise<DocumentoOrigen | null> {
         return await this.documentoRepo.findOne({
@@ -23,14 +41,19 @@ export class DocumentoOrigenService {
     /**
      * Busca documentos que coincidan parcialmente con el término de búsqueda
      */
-    async buscar(query: string): Promise<DocumentoOrigen[]> {
-        return await this.documentoRepo
+    async buscar(query: string, tipo?: string): Promise<DocumentoOrigen[]> {
+        const qb = this.documentoRepo
             .createQueryBuilder('doc')
             .leftJoinAndSelect('doc.items', 'items')
             .where('doc.nroDocumento ILIKE :query', { query: `%${query}%` })
             .orWhere('doc.descripcion ILIKE :query', { query: `%${query}%` })
-            .andWhere('doc.estado = :estado', { estado: 'PENDIENTE' })
-            .getMany();
+            .andWhere('doc.estado = :estado', { estado: 'pendiente' });
+
+        if (tipo) {
+            qb.andWhere('doc.tipoFuente = :tipo', { tipo });
+        }
+
+        return await qb.getMany();
     }
 
     /**
@@ -38,7 +61,7 @@ export class DocumentoOrigenService {
      */
     async obtenerPendientes(): Promise<DocumentoOrigen[]> {
         return await this.documentoRepo.find({
-            where: { estado: 'PENDIENTE' },
+            where: { estado: 'pendiente' },
             relations: ['items'],
             order: { createdAt: 'DESC' },
         });
@@ -52,7 +75,7 @@ export class DocumentoOrigenService {
         if (!doc) {
             throw new NotFoundException(`Documento con ID ${id} no encontrado`);
         }
-        doc.estado = 'PROCESADO';
+        doc.estado = 'procesado';
         return await this.documentoRepo.save(doc);
     }
 

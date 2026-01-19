@@ -52,14 +52,16 @@ export class IngresoApiService {
         // 2. Crear la nota de ingreso
         const orden = await this.notaIngresoService.create({
             nroDocumento: documento.nroDocumento,
-            origen: documento.descripcion || 'API Externa',
+            origen: documento.proveedor || documento.descripcion || 'API Externa',
             almacenId,
             usuario,
             sourceDocId: documentoId,
             detalles: documento.items.map((item) => ({
-                productoId: item.sku || item.codigoBarra || `ITEM-${item.id}`,
-                cantidad: Number(item.cantidadTotal) || 0,
-                cantidadEsperada: Number(item.cantidadTotal) || 0,
+                productoId: item.codItem || item.sku || item.codigoBarra || `ITEM-${item.id}`,
+                cantidad: Number(item.cantidad) || 0,
+                cantidadEsperada: Number(item.cantidad) || 0,
+                lote: item.lote,
+                fechaVencimiento: item.fechaVencimiento ? item.fechaVencimiento.toISOString().split('T')[0] : undefined,
                 productCodes: {
                     barcode: item.codigoBarra,
                     sku: item.sku,

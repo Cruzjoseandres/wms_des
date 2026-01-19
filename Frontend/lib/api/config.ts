@@ -20,4 +20,7 @@ export const API_ENDPOINTS = {
 
     // API móvil
     movil: `${API_BASE_URL}/api/movil`,
+
+    // Búsqueda de documentos externos
+    documentosExternos: `${API_BASE_URL}/documentos-externos`,
 };
