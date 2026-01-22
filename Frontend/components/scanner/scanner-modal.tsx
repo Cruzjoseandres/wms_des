@@ -245,7 +245,8 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
             {/* Camera view container */}
             <div
               ref={cameraContainerRef}
-              className="relative aspect-video bg-muted rounded-lg overflow-hidden"
+              className="relative bg-black rounded-lg overflow-hidden"
+              style={{ minHeight: '280px' }}
             >
               {cameraLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-muted z-10">
@@ -274,7 +275,10 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
               )}
 
               {/* This div will be used by html5-qrcode for the camera view */}
-              <div id="scanner-camera-view" className="w-full h-full" />
+              <div
+                id="scanner-camera-view"
+                style={{ width: '100%', minHeight: '280px' }}
+              />
 
               {/* Scan overlay - only show when camera is active */}
               {!cameraError && !cameraLoading && (
