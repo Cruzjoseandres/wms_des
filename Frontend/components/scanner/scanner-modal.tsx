@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useRef, useEffect, useCallback } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useState, useRef, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -36,9 +35,8 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
   const [isScanning, setIsScanning] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [cameraLoading, setCameraLoading] = useState(false)
-  const [html5QrCode, setHtml5QrCode] = useState<any>(null)
+  const [cameraActive, setCameraActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const cameraContainerRef = useRef<HTMLDivElement>(null)
   const scannerRef = useRef<any>(null)
 
   // Auto-focus input when modal opens
@@ -48,113 +46,116 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
     }
   }, [open, scanMode])
 
-  // Initialize camera when switching to camera mode
-  const startCamera = useCallback(async () => {
-    if (!cameraContainerRef.current) return
+  // Start camera when switching to camera mode
+  useEffect(() => {
+    if (scanMode === "camera" && open) {
+      initCamera()
+    }
+
+    return () => {
+      cleanupCamera()
+    }
+  }, [scanMode, open])
+
+  // Cleanup when modal closes
+  useEffect(() => {
+    if (!open) {
+      cleanupCamera()
+      setLastScan(null)
+      setCameraError(null)
+      setCameraActive(false)
+    }
+  }, [open])
+
+  const initCamera = async () => {
+    // Wait a bit for the DOM to be ready
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const element = document.getElementById("scanner-camera-view")
+    if (!element) {
+      console.error("Camera container not found")
+      setCameraError("Error: contenedor de cámara no encontrado")
+      return
+    }
 
     setCameraLoading(true)
     setCameraError(null)
 
     try {
-      // Dynamically import html5-qrcode only on client side
+      // Dynamically import html5-qrcode
       const { Html5Qrcode } = await import("html5-qrcode")
 
-      // Stop any existing scanner
+      // Stop any existing scanner first
       if (scannerRef.current) {
         try {
           await scannerRef.current.stop()
         } catch (e) {
-          // Ignore stop errors
+          // Ignore
         }
+        scannerRef.current = null
       }
 
-      const scannerId = "scanner-camera-view"
-
-      // Create scanner instance
-      const scanner = new Html5Qrcode(scannerId)
+      // Create new scanner
+      const scanner = new Html5Qrcode("scanner-camera-view")
       scannerRef.current = scanner
-      setHtml5QrCode(scanner)
 
-      // Request camera permission and start scanning
+      // Start scanning
       await scanner.start(
-        { facingMode: "environment" }, // Use back camera
+        { facingMode: "environment" },
         {
           fps: 10,
           qrbox: { width: 250, height: 150 },
-          aspectRatio: 1.777778,
         },
         (decodedText: string) => {
-          // On successful scan
+          console.log("Scanned:", decodedText)
           handleScan(decodedText)
-
-          // Vibrate if supported
           if (navigator.vibrate) {
             navigator.vibrate(200)
           }
         },
         () => {
-          // QR code not detected - ignore
+          // Ignore scan failures
         }
       )
 
       setCameraLoading(false)
+      setCameraActive(true)
+      console.log("Camera started successfully")
     } catch (error: any) {
       console.error("Camera error:", error)
       setCameraLoading(false)
+      setCameraActive(false)
 
-      if (error.name === "NotAllowedError" || error.message?.includes("Permission")) {
-        setCameraError("Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración del navegador.")
-      } else if (error.name === "NotFoundError" || error.message?.includes("No camera")) {
-        setCameraError("No se encontró ninguna cámara en este dispositivo.")
+      if (error.name === "NotAllowedError") {
+        setCameraError("Permiso de cámara denegado. Permite el acceso en la configuración del navegador.")
+      } else if (error.name === "NotFoundError") {
+        setCameraError("No se encontró ninguna cámara.")
       } else if (error.name === "NotReadableError") {
-        setCameraError("La cámara está siendo usada por otra aplicación.")
+        setCameraError("La cámara está en uso por otra aplicación.")
       } else {
-        setCameraError(`Error al iniciar la cámara: ${error.message || "Error desconocido"}`)
+        setCameraError(`Error: ${error.message || "No se pudo iniciar la cámara"}`)
       }
     }
-  }, [])
+  }
 
-  // Stop camera when switching modes or closing modal
-  const stopCamera = useCallback(async () => {
+  const cleanupCamera = async () => {
     if (scannerRef.current) {
       try {
         await scannerRef.current.stop()
-        scannerRef.current = null
-        setHtml5QrCode(null)
+        await scannerRef.current.clear()
       } catch (e) {
-        // Ignore stop errors
+        // Ignore cleanup errors
       }
+      scannerRef.current = null
     }
-  }, [])
-
-  // Handle mode changes
-  useEffect(() => {
-    if (scanMode === "camera" && open) {
-      startCamera()
-    } else {
-      stopCamera()
-    }
-  }, [scanMode, open, startCamera, stopCamera])
-
-  // Cleanup on unmount or modal close
-  useEffect(() => {
-    if (!open) {
-      stopCamera()
-      setLastScan(null)
-      setCameraError(null)
-    }
-
-    return () => {
-      stopCamera()
-    }
-  }, [open, stopCamera])
+    setCameraActive(false)
+  }
 
   const handleScan = (code: string) => {
     if (!code.trim()) return
 
     setIsScanning(true)
 
-    // Simulate API call to lookup product
     setTimeout(() => {
       const mockProduct = {
         name: "Producto Demo " + code.slice(-4),
@@ -172,7 +173,6 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
       setInputValue("")
       setIsScanning(false)
 
-      // Call the callback if provided
       if (onScanSuccess) {
         onScanSuccess(code)
       }
@@ -194,6 +194,9 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
             <ScanBarcode className="w-5 h-5 text-primary" />
             Escáner de Códigos
           </DialogTitle>
+          <DialogDescription>
+            Escanea códigos de barras o QR usando tu cámara o un lector USB.
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={scanMode} onValueChange={(v) => setScanMode(v as "camera" | "manual")}>
@@ -228,7 +231,7 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
                 <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               </div>
               <p className="text-xs text-muted-foreground">
-                Conecta tu lector de códigos USB y escanea. El código aparecerá automáticamente.
+                Conecta tu lector de códigos USB y escanea.
               </p>
             </div>
 
@@ -242,64 +245,61 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
           </TabsContent>
 
           <TabsContent value="camera" className="space-y-4 mt-4">
-            {/* Camera view container */}
+            {/* Camera container */}
             <div
-              ref={cameraContainerRef}
               className="relative bg-black rounded-lg overflow-hidden"
-              style={{ minHeight: '280px' }}
+              style={{ minHeight: '300px' }}
             >
+              {/* Loading state */}
               {cameraLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-muted z-10">
+                <div className="absolute inset-0 flex items-center justify-center bg-muted z-20">
                   <div className="text-center">
                     <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-primary" />
                     <p className="text-sm text-muted-foreground">Iniciando cámara...</p>
+                    <p className="text-xs text-muted-foreground mt-1">Permite el acceso cuando aparezca el diálogo</p>
                   </div>
                 </div>
               )}
 
-              {cameraError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-muted z-10 p-4">
+              {/* Error state */}
+              {cameraError && !cameraLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted z-20 p-4">
                   <div className="text-center">
                     <AlertCircle className="w-12 h-12 mx-auto mb-2 text-destructive" />
-                    <p className="text-sm text-destructive">{cameraError}</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-3"
-                      onClick={startCamera}
-                    >
+                    <p className="text-sm text-destructive mb-3">{cameraError}</p>
+                    <Button variant="outline" size="sm" onClick={initCamera}>
                       Reintentar
                     </Button>
                   </div>
                 </div>
               )}
 
-              {/* This div will be used by html5-qrcode for the camera view */}
+              {/* Camera view - html5-qrcode will render here */}
               <div
                 id="scanner-camera-view"
-                style={{ width: '100%', minHeight: '280px' }}
+                style={{ width: '100%', minHeight: '300px' }}
               />
 
-              {/* Scan overlay - only show when camera is active */}
-              {!cameraError && !cameraLoading && (
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-40 border-2 border-primary/50 rounded-lg">
-                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary rounded-tl" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary rounded-tr" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary rounded-bl" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary rounded-br" />
+              {/* Scan frame overlay */}
+              {cameraActive && !cameraError && !cameraLoading && (
+                <div className="absolute inset-0 pointer-events-none z-10">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-40 border-2 border-green-500/70 rounded-lg">
+                    <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-green-500 rounded-tl-lg" />
+                    <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-green-500 rounded-tr-lg" />
+                    <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-green-500 rounded-bl-lg" />
+                    <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-green-500 rounded-br-lg" />
                   </div>
                 </div>
               )}
             </div>
 
             <p className="text-xs text-muted-foreground text-center">
-              Apunta la cámara hacia el código de barras o QR para escanearlo automáticamente.
+              Apunta la cámara hacia el código de barras o QR.
             </p>
           </TabsContent>
         </Tabs>
 
-        {/* Last scan result */}
+        {/* Scan result */}
         {lastScan && (
           <div
             className={cn(
@@ -317,7 +317,7 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
                 <p className="font-medium text-sm">{lastScan.product?.name || "Producto no encontrado"}</p>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-muted-foreground">SKU:</span>{" "}
+                    <span className="text-muted-foreground">Código:</span>{" "}
                     <span className="font-mono">{lastScan.code}</span>
                   </div>
                   {lastScan.product && (
@@ -341,4 +341,3 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
     </Dialog>
   )
 }
-
