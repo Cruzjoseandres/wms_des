@@ -135,10 +135,18 @@ export default function NuevoIngresoPage() {
 
     setFoundItems(mappedItems)
     setSelectedItemIds(new Set(mappedItems.map(item => item.id)))
+
+    // Manejar proveedor vacío o nulo
+    const proveedorDoc = doc.proveedor || ""
+    if (!proveedorDoc) {
+      setAllowWithoutProvider(true)
+      toast.warning("Documento sin proveedor asignado. Ingrese uno manualmente.")
+    }
+
     setFoundDocInfo({
       id: doc.id,
       doc: doc.nroDocumento,
-      origen: doc.proveedor
+      origen: proveedorDoc
     })
     toast.success("Documento seleccionado")
   }
@@ -184,10 +192,18 @@ export default function NuevoIngresoPage() {
       setFoundItems(mappedItems)
       // Seleccionar todos los items por defecto
       setSelectedItemIds(new Set(mappedItems.map(item => item.id)))
+
+      // Manejar proveedor vacío o nulo
+      const proveedorDoc = docExterno.proveedor || ""
+      if (!proveedorDoc) {
+        setAllowWithoutProvider(true)
+        toast.warning("Documento sin proveedor asignado. Ingrese uno manualmente.")
+      }
+
       setFoundDocInfo({
         id: docExterno.id,
         doc: docExterno.nroDocumento,
-        origen: docExterno.proveedor
+        origen: proveedorDoc
       })
       toast.success("Documento encontrado")
 
@@ -253,7 +269,7 @@ export default function NuevoIngresoPage() {
           productoId: item.producto,
           cantidad: item.cantidad,
           lote: item.lote,
-          fechaVencimiento: item.vencimiento,
+          ...(item.vencimiento ? { fechaVencimiento: item.vencimiento } : {}),
         })),
         usuario: 'WEB',
         fechaInicio,

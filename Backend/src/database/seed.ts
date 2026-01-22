@@ -10,6 +10,7 @@ import { DetalleIngreso, ProductCodes } from '../detalle_ingreso/entities/detall
 import { StockInventario } from '../stock_inventario/entities/stock_inventario.entity';
 import { Inventario } from '../inventario/entities/inventario.entity';
 import { HistorialEstado } from '../historial_estado/entities/historial_estado.entity';
+import { Proveedor } from '../proveedor/entities/proveedor.entity';
 
 /**
  * Script de Seeders Completos para WMS
@@ -69,6 +70,7 @@ async function seed() {
     const stockRepo = dataSource.getRepository(StockInventario);
     const inventarioRepo = dataSource.getRepository(Inventario);
     const historialRepo = dataSource.getRepository(HistorialEstado);
+    const proveedorRepo = dataSource.getRepository(Proveedor);
 
     // =======================
     // 1. ALMACENES
@@ -95,132 +97,199 @@ async function seed() {
     }
 
     // =======================
-    // 2. ITEMS (Catálogo de Productos)
+    // 2. PROVEEDORES
     // =======================
-    console.log('\n📋 [2/9] Creando catálogo de items...');
+    console.log('\n🏢 [2/10] Creando proveedores...');
+    const proveedoresData = [
+        { codigo: 'PROV-001', nombre: 'Distribuidora Farmacéutica S.A.', ruc: '20123456789', direccion: 'Av. Principal 123', telefono: '01-2345678', email: 'ventas@farmadist.com', contacto: 'Juan Pérez' },
+        { codigo: 'PROV-002', nombre: 'Electrónicos Global', ruc: '20987654321', direccion: 'Jr. Comercio 456', telefono: '01-8765432', email: 'pedidos@electroglobal.com', contacto: 'María García' },
+        { codigo: 'PROV-003', nombre: 'Alimentos del Sur', ruc: '20456789123', direccion: 'Calle Industrial 789', telefono: '01-3456789', email: 'compras@alimentossur.com', contacto: 'Carlos López' },
+        { codigo: 'PROV-004', nombre: 'Ferretería Industrial', ruc: '20789123456', direccion: 'Av. Maquinaria 321', telefono: '01-6543210', email: 'ventas@ferreindustrial.com', contacto: 'Ana Martínez' },
+        { codigo: 'PROV-005', nombre: 'Office Depot', ruc: '20321654987', direccion: 'Jr. Oficinas 654', telefono: '01-1234567', email: 'empresas@officedepot.com', contacto: 'Pedro Sánchez' },
+        { codigo: 'PROV-006', nombre: 'Limpieza Total', ruc: '20654987321', direccion: 'Av. Limpieza 987', telefono: '01-9876543', email: 'ventas@limpiezatotal.com', contacto: 'Rosa Torres' },
+    ];
+
+    const proveedores: Record<string, Proveedor> = {};
+    for (const data of proveedoresData) {
+        let proveedor = await proveedorRepo.findOneBy({ codigo: data.codigo });
+        if (!proveedor) {
+            proveedor = await proveedorRepo.save(proveedorRepo.create(data));
+            console.log(`  ✓ Creado: ${data.nombre}`);
+        } else {
+            console.log(`  → Ya existe: ${data.nombre}`);
+        }
+        proveedores[data.codigo] = proveedor;
+    }
+
+    // =======================
+    // 3. ITEMS (Catálogo de Productos)
+    // =======================
+    console.log('\n📋 [3/10] Creando catálogo de items...');
     const itemsData = [
-        // Ferretería
-        { codigo: 'PROD-001', descripcion: 'Taladro Percutor Bosch', unidadMedida: 'UNID', precio: 150.00, codSubcategoria: 'FERR-01', estado: 1, stock: 0 },
-        { codigo: 'PROD-002', descripcion: 'Martillo de Goma', unidadMedida: 'PZA', precio: 25.50, codSubcategoria: 'FERR-01', estado: 1, stock: 0 },
-        { codigo: 'PROD-003', descripcion: 'Destornillador Phillips', unidadMedida: 'UNID', precio: 12.00, codSubcategoria: 'FERR-01', estado: 1, stock: 0 },
-        { codigo: 'PROD-004', descripcion: 'Llave Inglesa 10"', unidadMedida: 'UNID', precio: 35.00, codSubcategoria: 'FERR-01', estado: 1, stock: 0 },
-        // Farmacéuticos
-        { codigo: 'FARM-001', descripcion: 'Paracetamol 500mg', unidadMedida: 'CAJA', precio: 12.00, codSubcategoria: 'FARM-01', estado: 1, stock: 0 },
-        { codigo: 'FARM-002', descripcion: 'Ibuprofeno 400mg', unidadMedida: 'CAJA', precio: 15.00, codSubcategoria: 'FARM-01', estado: 1, stock: 0 },
-        { codigo: 'FARM-003', descripcion: 'Omeprazol 20mg', unidadMedida: 'CAJA', precio: 18.00, codSubcategoria: 'FARM-01', estado: 1, stock: 0 },
-        { codigo: 'FARM-004', descripcion: 'Amoxicilina 500mg', unidadMedida: 'CAJA', precio: 22.00, codSubcategoria: 'FARM-01', estado: 1, stock: 0 },
-        { codigo: 'FARM-005', descripcion: 'Vitamina C 1000mg', unidadMedida: 'FRASCO', precio: 28.00, codSubcategoria: 'FARM-02', estado: 1, stock: 0 },
-        // Electrónicos
-        { codigo: 'ELEC-001', descripcion: 'Cable USB-C 1m', unidadMedida: 'UNID', precio: 8.00, codSubcategoria: 'ELEC-01', estado: 1, stock: 0 },
-        { codigo: 'ELEC-002', descripcion: 'Cargador 20W', unidadMedida: 'UNID', precio: 25.00, codSubcategoria: 'ELEC-01', estado: 1, stock: 0 },
-        { codigo: 'ELEC-003', descripcion: 'Audífonos Bluetooth', unidadMedida: 'UNID', precio: 45.00, codSubcategoria: 'ELEC-02', estado: 1, stock: 0 },
-        { codigo: 'ELEC-004', descripcion: 'Mouse Inalámbrico', unidadMedida: 'UNID', precio: 35.00, codSubcategoria: 'ELEC-02', estado: 1, stock: 0 },
-        { codigo: 'ELEC-005', descripcion: 'Teclado Mecánico', unidadMedida: 'UNID', precio: 85.00, codSubcategoria: 'ELEC-02', estado: 1, stock: 0 },
-        // Alimentos
-        { codigo: 'ALIM-001', descripcion: 'Leche Entera 1L', unidadMedida: 'UNID', precio: 3.50, codSubcategoria: 'ALIM-01', estado: 1, stock: 0 },
-        { codigo: 'ALIM-002', descripcion: 'Aceite Vegetal 1L', unidadMedida: 'UNID', precio: 4.80, codSubcategoria: 'ALIM-02', estado: 1, stock: 0 },
-        { codigo: 'ALIM-003', descripcion: 'Arroz Premium 1kg', unidadMedida: 'KG', precio: 2.50, codSubcategoria: 'ALIM-02', estado: 1, stock: 0 },
-        { codigo: 'ALIM-004', descripcion: 'Atún en Lata', unidadMedida: 'UNID', precio: 5.00, codSubcategoria: 'ALIM-03', estado: 1, stock: 0 },
-        { codigo: 'ALIM-005', descripcion: 'Pasta Spaghetti 500g', unidadMedida: 'UNID', precio: 2.80, codSubcategoria: 'ALIM-02', estado: 1, stock: 0 },
-        { codigo: 'ALIM-006', descripcion: 'Galletas Oreo', unidadMedida: 'PQTE', precio: 3.20, codSubcategoria: 'ALIM-04', estado: 1, stock: 0 },
-        // Limpieza
-        { codigo: 'LIMP-001', descripcion: 'Detergente Líquido 1L', unidadMedida: 'UNID', precio: 8.50, codSubcategoria: 'LIMP-01', estado: 1, stock: 0 },
-        { codigo: 'LIMP-002', descripcion: 'Desinfectante 500ml', unidadMedida: 'UNID', precio: 6.00, codSubcategoria: 'LIMP-01', estado: 1, stock: 0 },
-        { codigo: 'LIMP-003', descripcion: 'Esponja Multiusos', unidadMedida: 'PQTE', precio: 4.50, codSubcategoria: 'LIMP-02', estado: 1, stock: 0 },
-        // Oficina
-        { codigo: 'OFIC-001', descripcion: 'Papel Bond A4 500 hojas', unidadMedida: 'RESMA', precio: 15.00, codSubcategoria: 'OFIC-01', estado: 1, stock: 0 },
-        { codigo: 'OFIC-002', descripcion: 'Bolígrafos Azules x12', unidadMedida: 'CAJA', precio: 8.00, codSubcategoria: 'OFIC-01', estado: 1, stock: 0 },
+        // Ferretería - Proveedor PROV-004
+        { codigo: 'PROD-001', descripcion: 'Taladro Percutor Bosch', unidadMedida: 'UNID', precio: 150.00, codSubcategoria: 'FERR-01', estado: 1, stock: 0, codigoBarra: '7501234567001', codigoFabrica: 'BOSCH-TPB-001', codigoProducto: 'TAL-PERC-01', proveedorCodigo: 'PROV-004' },
+        { codigo: 'PROD-002', descripcion: 'Martillo de Goma', unidadMedida: 'PZA', precio: 25.50, codSubcategoria: 'FERR-01', estado: 1, stock: 0, codigoBarra: '7501234567002', codigoFabrica: 'STAN-MG-002', codigoProducto: 'MART-GOM-02', proveedorCodigo: 'PROV-004' },
+        { codigo: 'PROD-003', descripcion: 'Destornillador Phillips', unidadMedida: 'UNID', precio: 12.00, codSubcategoria: 'FERR-01', estado: 1, stock: 0, codigoBarra: '7501234567003', codigoFabrica: 'STAN-DP-003', codigoProducto: 'DEST-PHI-03', proveedorCodigo: 'PROV-004' },
+        { codigo: 'PROD-004', descripcion: 'Llave Inglesa 10"', unidadMedida: 'UNID', precio: 35.00, codSubcategoria: 'FERR-01', estado: 1, stock: 0, codigoBarra: '7501234567004', codigoFabrica: 'STAN-LI-004', codigoProducto: 'LLAV-ING-04', proveedorCodigo: 'PROV-004' },
+        // Farmacéuticos - Proveedor PROV-001
+        { codigo: 'FARM-001', descripcion: 'Paracetamol 500mg', unidadMedida: 'CAJA', precio: 12.00, codSubcategoria: 'FARM-01', estado: 1, stock: 0, codigoBarra: '7502222111001', codigoFabrica: 'BAYER-PC-500', codigoProducto: 'PARA-500-01', proveedorCodigo: 'PROV-001' },
+        { codigo: 'FARM-002', descripcion: 'Ibuprofeno 400mg', unidadMedida: 'CAJA', precio: 15.00, codSubcategoria: 'FARM-01', estado: 1, stock: 0, codigoBarra: '7502222111002', codigoFabrica: 'BAYER-IB-400', codigoProducto: 'IBUP-400-02', proveedorCodigo: 'PROV-001' },
+        { codigo: 'FARM-003', descripcion: 'Omeprazol 20mg', unidadMedida: 'CAJA', precio: 18.00, codSubcategoria: 'FARM-01', estado: 1, stock: 0, codigoBarra: '7502222111003', codigoFabrica: 'PFIZ-OM-020', codigoProducto: 'OMEP-020-03', proveedorCodigo: 'PROV-001' },
+        { codigo: 'FARM-004', descripcion: 'Amoxicilina 500mg', unidadMedida: 'CAJA', precio: 22.00, codSubcategoria: 'FARM-01', estado: 1, stock: 0, codigoBarra: '7502222111004', codigoFabrica: 'GLAX-AM-500', codigoProducto: 'AMOX-500-04', proveedorCodigo: 'PROV-001' },
+        { codigo: 'FARM-005', descripcion: 'Vitamina C 1000mg', unidadMedida: 'FRASCO', precio: 28.00, codSubcategoria: 'FARM-02', estado: 1, stock: 0, codigoBarra: '7502222111005', codigoFabrica: 'PFIZ-VC-1000', codigoProducto: 'VITC-1000-05', proveedorCodigo: 'PROV-001' },
+        // Electrónicos - Proveedor PROV-002
+        { codigo: 'ELEC-001', descripcion: 'Cable USB-C 1m', unidadMedida: 'UNID', precio: 8.00, codSubcategoria: 'ELEC-01', estado: 1, stock: 0, codigoBarra: '7503333222001', codigoFabrica: 'ANKE-USB-C1', codigoProducto: 'CABL-USBC-01', proveedorCodigo: 'PROV-002' },
+        { codigo: 'ELEC-002', descripcion: 'Cargador 20W', unidadMedida: 'UNID', precio: 25.00, codSubcategoria: 'ELEC-01', estado: 1, stock: 0, codigoBarra: '7503333222002', codigoFabrica: 'ANKE-CRG-20W', codigoProducto: 'CARG-20W-02', proveedorCodigo: 'PROV-002' },
+        { codigo: 'ELEC-003', descripcion: 'Audífonos Bluetooth', unidadMedida: 'UNID', precio: 45.00, codSubcategoria: 'ELEC-02', estado: 1, stock: 0, codigoBarra: '7503333222003', codigoFabrica: 'SONY-ABT-01', codigoProducto: 'AUDI-BT-03', proveedorCodigo: 'PROV-002' },
+        { codigo: 'ELEC-004', descripcion: 'Mouse Inalámbrico', unidadMedida: 'UNID', precio: 35.00, codSubcategoria: 'ELEC-02', estado: 1, stock: 0, codigoBarra: '7503333222004', codigoFabrica: 'LOGI-MW-01', codigoProducto: 'MOUS-INL-04', proveedorCodigo: 'PROV-002' },
+        { codigo: 'ELEC-005', descripcion: 'Teclado Mecánico', unidadMedida: 'UNID', precio: 85.00, codSubcategoria: 'ELEC-02', estado: 1, stock: 0, codigoBarra: '7503333222005', codigoFabrica: 'LOGI-TM-01', codigoProducto: 'TECL-MEC-05', proveedorCodigo: 'PROV-002' },
+        // Alimentos - Proveedor PROV-003
+        { codigo: 'ALIM-001', descripcion: 'Leche Entera 1L', unidadMedida: 'UNID', precio: 3.50, codSubcategoria: 'ALIM-01', estado: 1, stock: 0, codigoBarra: '7504444333001', codigoFabrica: 'GLORIA-LE-1L', codigoProducto: 'LECH-ENT-01', proveedorCodigo: 'PROV-003' },
+        { codigo: 'ALIM-002', descripcion: 'Aceite Vegetal 1L', unidadMedida: 'UNID', precio: 4.80, codSubcategoria: 'ALIM-02', estado: 1, stock: 0, codigoBarra: '7504444333002', codigoFabrica: 'PRIMOR-AV-1L', codigoProducto: 'ACEI-VEG-02', proveedorCodigo: 'PROV-003' },
+        { codigo: 'ALIM-003', descripcion: 'Arroz Premium 1kg', unidadMedida: 'KG', precio: 2.50, codSubcategoria: 'ALIM-02', estado: 1, stock: 0, codigoBarra: '7504444333003', codigoFabrica: 'COSTE-AR-1K', codigoProducto: 'ARRO-PRE-03', proveedorCodigo: 'PROV-003' },
+        { codigo: 'ALIM-004', descripcion: 'Atún en Lata', unidadMedida: 'UNID', precio: 5.00, codSubcategoria: 'ALIM-03', estado: 1, stock: 0, codigoBarra: '7504444333004', codigoFabrica: 'FLORIDA-AT', codigoProducto: 'ATUN-LAT-04', proveedorCodigo: 'PROV-003' },
+        { codigo: 'ALIM-005', descripcion: 'Pasta Spaghetti 500g', unidadMedida: 'UNID', precio: 2.80, codSubcategoria: 'ALIM-02', estado: 1, stock: 0, codigoBarra: '7504444333005', codigoFabrica: 'LAVORO-PS-500', codigoProducto: 'PAST-SPA-05', proveedorCodigo: 'PROV-003' },
+        { codigo: 'ALIM-006', descripcion: 'Galletas Oreo', unidadMedida: 'PQTE', precio: 3.20, codSubcategoria: 'ALIM-04', estado: 1, stock: 0, codigoBarra: '7504444333006', codigoFabrica: 'NABISCO-OREO', codigoProducto: 'GALL-ORE-06', proveedorCodigo: 'PROV-003' },
+        // Limpieza - Proveedor PROV-006
+        { codigo: 'LIMP-001', descripcion: 'Detergente Líquido 1L', unidadMedida: 'UNID', precio: 8.50, codSubcategoria: 'LIMP-01', estado: 1, stock: 0, codigoBarra: '7505555444001', codigoFabrica: 'ACE-DL-1L', codigoProducto: 'DETE-LIQ-01', proveedorCodigo: 'PROV-006' },
+        { codigo: 'LIMP-002', descripcion: 'Desinfectante 500ml', unidadMedida: 'UNID', precio: 6.00, codSubcategoria: 'LIMP-01', estado: 1, stock: 0, codigoBarra: '7505555444002', codigoFabrica: 'LYSOL-D-500', codigoProducto: 'DESI-500-02', proveedorCodigo: 'PROV-006' },
+        { codigo: 'LIMP-003', descripcion: 'Esponja Multiusos', unidadMedida: 'PQTE', precio: 4.50, codSubcategoria: 'LIMP-02', estado: 1, stock: 0, codigoBarra: '7505555444003', codigoFabrica: 'SCOT-EM-01', codigoProducto: 'ESPO-MUL-03', proveedorCodigo: 'PROV-006' },
+        // Oficina - Proveedor PROV-005
+        { codigo: 'OFIC-001', descripcion: 'Papel Bond A4 500 hojas', unidadMedida: 'RESMA', precio: 15.00, codSubcategoria: 'OFIC-01', estado: 1, stock: 0, codigoBarra: '7506666555001', codigoFabrica: 'XEROX-PB-A4', codigoProducto: 'PAPE-A4-01', proveedorCodigo: 'PROV-005' },
+        { codigo: 'OFIC-002', descripcion: 'Bolígrafos Azules x12', unidadMedida: 'CAJA', precio: 8.00, codSubcategoria: 'OFIC-01', estado: 1, stock: 0, codigoBarra: '7506666555002', codigoFabrica: 'BIC-BA-12', codigoProducto: 'BOLI-AZU-02', proveedorCodigo: 'PROV-005' },
     ];
 
     for (const data of itemsData) {
-        const existing = await itemRepo.findOneBy({ codigo: data.codigo });
-        if (!existing) {
-            await itemRepo.save(itemRepo.create(data));
+        let item = await itemRepo.findOneBy({ codigo: data.codigo });
+        if (!item) {
+            const { proveedorCodigo, ...itemData } = data;
+            item = await itemRepo.save(itemRepo.create(itemData));
             console.log(`  ✓ Creado: ${data.descripcion}`);
         } else {
-            console.log(`  → Ya existe: ${data.descripcion}`);
+            // Actualizar campos nuevos si el item ya existe
+            item.codigoBarra = data.codigoBarra;
+            item.codigoFabrica = data.codigoFabrica;
+            item.codigoProducto = data.codigoProducto;
+            await itemRepo.save(item);
+            console.log(`  → Actualizado: ${data.descripcion}`);
+        }
+        
+        // Asignar proveedor al item
+        if (data.proveedorCodigo && proveedores[data.proveedorCodigo]) {
+            const proveedor = proveedores[data.proveedorCodigo];
+            // Verificar si ya tiene el proveedor asignado
+            const itemWithProveedores = await itemRepo.findOne({
+                where: { id: item.id },
+                relations: ['proveedores'],
+            });
+            if (itemWithProveedores && (!itemWithProveedores.proveedores || !itemWithProveedores.proveedores.find(p => p.id === proveedor.id))) {
+                itemWithProveedores.proveedores = [...(itemWithProveedores.proveedores || []), proveedor];
+                await itemRepo.save(itemWithProveedores);
+            }
         }
     }
 
     // =======================
-    // 3. DOCUMENTOS DE ORIGEN (SAP/ERP)
+    // 4. DOCUMENTOS DE ORIGEN (SAP/ERP)
     // =======================
-    console.log('\n📄 [3/9] Creando documentos de origen (SAP/ERP)...');
+    console.log('\n📄 [4/10] Creando documentos de origen (SAP/ERP)...');
     const docsData = [
+        // Documentos API_ERP (simulando SAP/Oracle)
         {
             nroDocumento: 'SAP-2024-001',
-            descripcion: 'Semillas y Fertilizantes - Proveedor Externo',
+            descripcion: 'Farmacéuticos - Paracetamol, Ibuprofeno, Omeprazol',
             tipoFuente: 'API_ERP',
-            proveedor: 'Proveedor Externo API',
+            proveedor: 'Distribuidora Farmacéutica S.A.',
             fechaDocumento: new Date('2024-01-15'),
             estado: 'pendiente',
-            datosRaw: { pedido: 'PO-2024-001' },
+            datosRaw: { pedido: 'PO-2024-001', sistema: 'SAP' },
             items: [
-                { codItem: 'PRD-001', descripcion: 'Semilla Soja Premium Variety A', cantidad: 100, lote: 'L2025-100', fechaVencimiento: new Date('2026-06-30') },
-                { codItem: 'PRD-002', descripcion: 'Fertilizante NPK 10-10-10', cantidad: 50, lote: 'L2025-101', fechaVencimiento: new Date('2026-12-31') },
+                { codItem: 'FARM-001', descripcion: 'Paracetamol 500mg', cantidad: 100, lote: 'L2025-F001', fechaVencimiento: new Date('2026-06-30'), codigoBarra: '7502222111001', sku: 'FARM-001', codigoFabrica: 'BAYER-PC-500', codigoSistema: 'SAP-FARM-001', unidadMedida: 'CAJA' },
+                { codItem: 'FARM-002', descripcion: 'Ibuprofeno 400mg', cantidad: 150, lote: 'L2025-F002', fechaVencimiento: new Date('2026-08-15'), codigoBarra: '7502222111002', sku: 'FARM-002', codigoFabrica: 'BAYER-IB-400', codigoSistema: 'SAP-FARM-002', unidadMedida: 'CAJA' },
+                { codItem: 'FARM-003', descripcion: 'Omeprazol 20mg', cantidad: 200, lote: 'L2025-F003', fechaVencimiento: new Date('2026-12-31'), codigoBarra: '7502222111003', sku: 'FARM-003', codigoFabrica: 'PFIZ-OM-020', codigoSistema: 'SAP-FARM-003', unidadMedida: 'CAJA' },
             ],
         },
         {
             nroDocumento: 'SAP-2024-002',
-            descripcion: 'Herbicidas - Lote Especial',
+            descripcion: 'Electrónicos - Cables USB, Cargadores',
             tipoFuente: 'API_ERP',
-            proveedor: 'Proveedor Externo API',
+            proveedor: 'Electrónicos Global',
             fechaDocumento: new Date('2024-01-20'),
             estado: 'pendiente',
-            datosRaw: { pedido: 'PO-2024-002' },
+            datosRaw: { pedido: 'PO-2024-002', sistema: 'SAP' },
             items: [
-                { codItem: 'PRD-003', descripcion: 'Herbicida Glifosato Standard', cantidad: 200, lote: 'L2025-102', fechaVencimiento: new Date('2025-12-15') },
-            ],
-        },
-        {
-            nroDocumento: 'INT-2024-001',
-            descripcion: 'Productos Internos - SGLA',
-            tipoFuente: 'MANUAL',
-            proveedor: 'Base Interna SGLA',
-            fechaDocumento: new Date('2024-02-01'),
-            estado: 'pendiente',
-            datosRaw: { origen: 'interno' },
-            items: [
-                { codItem: 'PRD-LOCAL-01', descripcion: 'Maíz Híbrido Nacional', cantidad: 500, lote: 'L-INT-001', fechaVencimiento: new Date('2025-10-20') },
+                { codItem: 'ELEC-001', descripcion: 'Cable USB-C 1m', cantidad: 500, lote: 'L2025-E001', codigoBarra: '7503333222001', sku: 'ELEC-001', codigoFabrica: 'ANKE-USB-C1', codigoSistema: 'SAP-ELEC-001', unidadMedida: 'UNID' },
+                { codItem: 'ELEC-002', descripcion: 'Cargador 20W', cantidad: 300, lote: 'L2025-E002', codigoBarra: '7503333222002', sku: 'ELEC-002', codigoFabrica: 'ANKE-CRG-20W', codigoSistema: 'SAP-ELEC-002', unidadMedida: 'UNID' },
             ],
         },
         {
             nroDocumento: 'SAP-2024-003',
-            descripcion: 'Alimentos - Productos Básicos',
+            descripcion: 'Alimentos - Leche, Aceite, Arroz, Atún',
             tipoFuente: 'API_ERP',
-            proveedor: 'Distribuidora Alimentos',
+            proveedor: 'Alimentos del Sur',
             fechaDocumento: new Date('2024-03-10'),
-            estado: 'procesado',
-            datosRaw: { pedido: 'PO-2024-003' },
+            estado: 'pendiente',
+            datosRaw: { pedido: 'PO-2024-003', sistema: 'SAP' },
             items: [
-                { codItem: 'ALIM-001', descripcion: 'Leche Entera 1L', cantidad: 500, lote: 'A2025-200', fechaVencimiento: new Date('2025-03-01') },
-                { codItem: 'ALIM-002', descripcion: 'Aceite Vegetal 1L', cantidad: 300, lote: 'A2025-201', fechaVencimiento: new Date('2025-04-15') },
+                { codItem: 'ALIM-001', descripcion: 'Leche Entera 1L', cantidad: 1000, lote: 'A2025-001', fechaVencimiento: new Date('2025-06-01'), codigoBarra: '7504444333001', sku: 'ALIM-001', codigoFabrica: 'GLORIA-LE-1L', codigoSistema: 'SAP-ALIM-001', unidadMedida: 'UNID' },
+                { codItem: 'ALIM-002', descripcion: 'Aceite Vegetal 1L', cantidad: 500, lote: 'A2025-002', fechaVencimiento: new Date('2025-12-15'), codigoBarra: '7504444333002', sku: 'ALIM-002', codigoFabrica: 'PRIMOR-AV-1L', codigoSistema: 'SAP-ALIM-002', unidadMedida: 'UNID' },
+                { codItem: 'ALIM-003', descripcion: 'Arroz Premium 1kg', cantidad: 800, lote: 'A2025-003', fechaVencimiento: new Date('2026-01-20'), codigoBarra: '7504444333003', sku: 'ALIM-003', codigoFabrica: 'COSTE-AR-1K', codigoSistema: 'SAP-ALIM-003', unidadMedida: 'KG' },
+                { codItem: 'ALIM-004', descripcion: 'Atún en Lata', cantidad: 600, lote: 'A2025-004', fechaVencimiento: new Date('2027-03-30'), codigoBarra: '7504444333004', sku: 'ALIM-004', codigoFabrica: 'FLORIDA-AT', codigoSistema: 'SAP-ALIM-004', unidadMedida: 'UNID' },
             ],
         },
         {
             nroDocumento: 'SAP-2024-004',
-            descripcion: 'Herramientas de Construcción',
+            descripcion: 'Herramientas - Taladros, Martillos',
             tipoFuente: 'API_ERP',
             proveedor: 'Ferretería Industrial',
             fechaDocumento: new Date('2024-04-05'),
             estado: 'pendiente',
-            datosRaw: { pedido: 'PO-2024-004' },
+            datosRaw: { pedido: 'PO-2024-004', sistema: 'SAP' },
             items: [
-                { codItem: 'PROD-001', descripcion: 'Taladro Percutor Bosch', cantidad: 50, lote: 'LOTE-P001' },
-                { codItem: 'PROD-002', descripcion: 'Martillo de Goma', cantidad: 100, lote: 'LOTE-P002' },
+                { codItem: 'PROD-001', descripcion: 'Taladro Percutor Bosch', cantidad: 50, lote: 'LOTE-P001', codigoBarra: '7501234567001', sku: 'PROD-001', codigoFabrica: 'BOSCH-TPB-001', codigoSistema: 'SAP-PROD-001', unidadMedida: 'UNID' },
+                { codItem: 'PROD-002', descripcion: 'Martillo de Goma', cantidad: 100, lote: 'LOTE-P002', codigoBarra: '7501234567002', sku: 'PROD-002', codigoFabrica: 'STAN-MG-002', codigoSistema: 'SAP-PROD-002', unidadMedida: 'PZA' },
+            ],
+        },
+        // Documentos MANUAL (ingresados manualmente)
+        {
+            nroDocumento: 'INT-2024-001',
+            descripcion: 'Suministros de Oficina - Compra Local',
+            tipoFuente: 'MANUAL',
+            proveedor: 'Office Depot',
+            fechaDocumento: new Date('2024-02-01'),
+            estado: 'pendiente',
+            datosRaw: { origen: 'compra_local', factura: 'F001-00123' },
+            items: [
+                { codItem: 'OFIC-001', descripcion: 'Papel Bond A4 500 hojas', cantidad: 100, lote: 'OFC-2024-01', codigoBarra: '7506666555001', sku: 'OFIC-001', codigoFabrica: 'XEROX-PB-A4', codigoSistema: 'INT-OFIC-001', unidadMedida: 'RESMA' },
+                { codItem: 'OFIC-002', descripcion: 'Bolígrafos Azules x12', cantidad: 50, lote: 'OFC-2024-02', codigoBarra: '7506666555002', sku: 'OFIC-002', codigoFabrica: 'BIC-BA-12', codigoSistema: 'INT-OFIC-002', unidadMedida: 'CAJA' },
             ],
         },
         {
             nroDocumento: 'INT-2024-002',
-            descripcion: 'Suministros de Oficina',
+            descripcion: 'Productos de Limpieza - Proveedor Local',
             tipoFuente: 'MANUAL',
-            proveedor: 'Office Depot',
+            proveedor: 'Limpieza Total',
             fechaDocumento: new Date('2024-05-01'),
             estado: 'pendiente',
-            datosRaw: { origen: 'compra_local' },
+            datosRaw: { origen: 'compra_local', factura: 'F002-00456' },
             items: [
-                { codItem: 'OFIC-001', descripcion: 'Papel Bond A4 500 hojas', cantidad: 100, lote: 'OFC-2024-01' },
-                { codItem: 'OFIC-002', descripcion: 'Bolígrafos Azules x12', cantidad: 50, lote: 'OFC-2024-02' },
+                { codItem: 'LIMP-001', descripcion: 'Detergente Líquido 1L', cantidad: 200, lote: 'LIM-2024-01', codigoBarra: '7505555444001', sku: 'LIMP-001', codigoFabrica: 'ACE-DL-1L', codigoSistema: 'INT-LIMP-001', unidadMedida: 'UNID' },
+                { codItem: 'LIMP-002', descripcion: 'Desinfectante 500ml', cantidad: 150, lote: 'LIM-2024-02', codigoBarra: '7505555444002', sku: 'LIMP-002', codigoFabrica: 'LYSOL-D-500', codigoSistema: 'INT-LIMP-002', unidadMedida: 'UNID' },
+                { codItem: 'LIMP-003', descripcion: 'Esponja Multiusos', cantidad: 300, lote: 'LIM-2024-03', codigoBarra: '7505555444003', sku: 'LIMP-003', codigoFabrica: 'SCOT-EM-01', codigoSistema: 'INT-LIMP-003', unidadMedida: 'PQTE' },
+            ],
+        },
+        {
+            nroDocumento: 'INT-2024-003',
+            descripcion: 'Electrónicos Premium - Importación Directa',
+            tipoFuente: 'MANUAL',
+            proveedor: 'Electrónicos Global',
+            fechaDocumento: new Date('2024-06-15'),
+            estado: 'pendiente',
+            datosRaw: { origen: 'importacion', factura: 'IMP-2024-789' },
+            items: [
+                { codItem: 'ELEC-003', descripcion: 'Audífonos Bluetooth', cantidad: 80, lote: 'ELE-2024-03', codigoBarra: '7503333222003', sku: 'ELEC-003', codigoFabrica: 'SONY-ABT-01', codigoSistema: 'INT-ELEC-003', unidadMedida: 'UNID' },
+                { codItem: 'ELEC-004', descripcion: 'Mouse Inalámbrico', cantidad: 120, lote: 'ELE-2024-04', codigoBarra: '7503333222004', sku: 'ELEC-004', codigoFabrica: 'LOGI-MW-01', codigoSistema: 'INT-ELEC-004', unidadMedida: 'UNID' },
+                { codItem: 'ELEC-005', descripcion: 'Teclado Mecánico', cantidad: 60, lote: 'ELE-2024-05', codigoBarra: '7503333222005', sku: 'ELEC-005', codigoFabrica: 'LOGI-TM-01', codigoSistema: 'INT-ELEC-005', unidadMedida: 'UNID' },
             ],
         },
     ];
@@ -245,6 +314,11 @@ async function seed() {
                     cantidad: itemData.cantidad,
                     lote: itemData.lote,
                     fechaVencimiento: 'fechaVencimiento' in itemData ? itemData.fechaVencimiento : undefined,
+                    codigoBarra: itemData.codigoBarra,
+                    sku: itemData.sku,
+                    codigoFabrica: itemData.codigoFabrica,
+                    codigoSistema: itemData.codigoSistema,
+                    unidadMedida: itemData.unidadMedida,
                     documento: doc,
                 }));
             }

@@ -14,6 +14,7 @@ import { ItemDocumentoOrigenModule } from './item_documento_origen/item_document
 import { StockInventarioModule } from './stock_inventario/stock_inventario.module';
 import { HistorialEstadoModule } from './historial_estado/historial_estado.module';
 import { IngresoApiModule } from './ingreso_api/ingreso_api.module';
+import { ProveedorModule } from './proveedor/proveedor.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { IngresoApiModule } from './ingreso_api/ingreso_api.module';
     StockInventarioModule,
     HistorialEstadoModule,
     IngresoApiModule,
+    ProveedorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,0 +1,89 @@
+[
+  {
+    "id": 1001,
+    "nroDocumento": "SAP-2024-001",
+    "tipoFuente": "API_ERP",
+    "proveedor": "Distribuidora Farmacéutica S.A.",
+    "fechaDocumento": "2024-01-15",
+    "descripcion": "Farmacéuticos - Paracetamol, Ibuprofeno, Omeprazol",
+    "estado": "pendiente",
+    "datosRaw": { "pedido": "PO-2024-001", "sistema": "SAP" },
+    "items": [
+      { "id": 10001, "codItem": "FARM-001", "descripcion": "Paracetamol 500mg", "cantidad": 100, "lote": "L2025-F001", "fechaVencimiento": "2026-06-30", "codigoBarra": "7502222111001", "sku": "FARM-001", "codigoFabrica": "BAYER-PC-500", "codigoSistema": "SAP-FARM-001", "unidadMedida": "CAJA" },
+      { "id": 10002, "codItem": "FARM-002", "descripcion": "Ibuprofeno 400mg", "cantidad": 150, "lote": "L2025-F002", "fechaVencimiento": "2026-08-15", "codigoBarra": "7502222111002", "sku": "FARM-002", "codigoFabrica": "BAYER-IB-400", "codigoSistema": "SAP-FARM-002", "unidadMedida": "CAJA" },
+      { "id": 10003, "codItem": "FARM-003", "descripcion": "Omeprazol 20mg", "cantidad": 200, "lote": "L2025-F003", "fechaVencimiento": "2026-12-31", "codigoBarra": "7502222111003", "sku": "FARM-003", "codigoFabrica": "PFIZ-OM-020", "codigoSistema": "SAP-FARM-003", "unidadMedida": "CAJA" }
+    ]
+  },
+  {
+    "id": 1002,
+    "nroDocumento": "SAP-2024-002",
+    "tipoFuente": "API_ERP",
+    "proveedor": "Electrónicos Global",
+    "fechaDocumento": "2024-01-20",
+    "descripcion": "Electrónicos - Cables USB, Cargadores",
+    "estado": "pendiente",
+    "datosRaw": { "pedido": "PO-2024-002", "sistema": "SAP" },
+    "items": [
+      { "id": 10004, "codItem": "ELEC-001", "descripcion": "Cable USB-C 1m", "cantidad": 500, "lote": "L2025-E001", "codigoBarra": "7503333222001", "sku": "ELEC-001", "codigoFabrica": "ANKE-USB-C1", "codigoSistema": "SAP-ELEC-001", "unidadMedida": "UNID" },
+      { "id": 10005, "codItem": "ELEC-002", "descripcion": "Cargador 20W", "cantidad": 300, "lote": "L2025-E002", "codigoBarra": "7503333222002", "sku": "ELEC-002", "codigoFabrica": "ANKE-CRG-20W", "codigoSistema": "SAP-ELEC-002", "unidadMedida": "UNID" }
+    ]
+  },
+  {
+    "id": 1003,
+    "nroDocumento": "SAP-2024-003",
+    "tipoFuente": "API_ERP",
+    "proveedor": "Alimentos del Sur",
+    "fechaDocumento": "2024-03-10",
+    "descripcion": "Alimentos - Leche, Aceite, Arroz, Atún",
+    "estado": "pendiente",
+    "datosRaw": { "pedido": "PO-2024-003", "sistema": "SAP" },
+    "items": [
+      { "id": 10006, "codItem": "ALIM-001", "descripcion": "Leche Entera 1L", "cantidad": 1000, "lote": "A2025-001", "fechaVencimiento": "2025-06-01", "codigoBarra": "7504444333001", "sku": "ALIM-001", "codigoFabrica": "GLORIA-LE-1L", "codigoSistema": "SAP-ALIM-001", "unidadMedida": "UNID" },
+      { "id": 10007, "codItem": "ALIM-002", "descripcion": "Aceite Vegetal 1L", "cantidad": 500, "lote": "A2025-002", "fechaVencimiento": "2025-12-15", "codigoBarra": "7504444333002", "sku": "ALIM-002", "codigoFabrica": "PRIMOR-AV-1L", "codigoSistema": "SAP-ALIM-002", "unidadMedida": "UNID" },
+      { "id": 10008, "codItem": "ALIM-003", "descripcion": "Arroz Premium 1kg", "cantidad": 800, "lote": "A2025-003", "fechaVencimiento": "2026-01-20", "codigoBarra": "7504444333003", "sku": "ALIM-003", "codigoFabrica": "COSTE-AR-1K", "codigoSistema": "SAP-ALIM-003", "unidadMedida": "KG" },
+      { "id": 10009, "codItem": "ALIM-004", "descripcion": "Atún en Lata", "cantidad": 600, "lote": "A2025-004", "fechaVencimiento": "2027-03-30", "codigoBarra": "7504444333004", "sku": "ALIM-004", "codigoFabrica": "FLORIDA-AT", "codigoSistema": "SAP-ALIM-004", "unidadMedida": "UNID" }
+    ]
+  },
+  {
+    "id": 1004,
+    "nroDocumento": "SAP-2024-004",
+    "tipoFuente": "API_ERP",
+    "proveedor": "Ferretería Industrial",
+    "fechaDocumento": "2024-04-05",
+    "descripcion": "Herramientas - Taladros, Martillos",
+    "estado": "pendiente",
+    "datosRaw": { "pedido": "PO-2024-004", "sistema": "SAP" },
+    "items": [
+      { "id": 10010, "codItem": "PROD-001", "descripcion": "Taladro Percutor Bosch", "cantidad": 50, "lote": "LOTE-P001", "codigoBarra": "7501234567001", "sku": "PROD-001", "codigoFabrica": "BOSCH-TPB-001", "codigoSistema": "SAP-PROD-001", "unidadMedida": "UNID" },
+      { "id": 10011, "codItem": "PROD-002", "descripcion": "Martillo de Goma", "cantidad": 100, "lote": "LOTE-P002", "codigoBarra": "7501234567002", "sku": "PROD-002", "codigoFabrica": "STAN-MG-002", "codigoSistema": "SAP-PROD-002", "unidadMedida": "PZA" }
+    ]
+  },
+  {
+    "id": 1005,
+    "nroDocumento": "SAP-2024-005",
+    "tipoFuente": "API_ERP",
+    "proveedor": "Limpieza Total",
+    "fechaDocumento": "2024-05-20",
+    "descripcion": "Productos de Limpieza",
+    "estado": "pendiente",
+    "datosRaw": { "pedido": "PO-2024-005", "sistema": "SAP" },
+    "items": [
+      { "id": 10012, "codItem": "LIMP-001", "descripcion": "Detergente Líquido 1L", "cantidad": 200, "lote": "LIM-2024-01", "codigoBarra": "7505555444001", "sku": "LIMP-001", "codigoFabrica": "ACE-DL-1L", "codigoSistema": "SAP-LIMP-001", "unidadMedida": "UNID" },
+      { "id": 10013, "codItem": "LIMP-002", "descripcion": "Desinfectante 500ml", "cantidad": 150, "lote": "LIM-2024-02", "codigoBarra": "7505555444002", "sku": "LIMP-002", "codigoFabrica": "LYSOL-D-500", "codigoSistema": "SAP-LIMP-002", "unidadMedida": "UNID" }
+    ]
+  },
+  {
+    "id": 1006,
+    "nroDocumento": "SAP-2024-006",
+    "tipoFuente": "API_ERP",
+    "proveedor": "Office Depot",
+    "fechaDocumento": "2024-06-10",
+    "descripcion": "Suministros de Oficina",
+    "estado": "pendiente",
+    "datosRaw": { "pedido": "PO-2024-006", "sistema": "SAP" },
+    "items": [
+      { "id": 10014, "codItem": "OFIC-001", "descripcion": "Papel Bond A4 500 hojas", "cantidad": 300, "lote": "OFC-2024-01", "codigoBarra": "7506666555001", "sku": "OFIC-001", "codigoFabrica": "XEROX-PB-A4", "codigoSistema": "SAP-OFIC-001", "unidadMedida": "RESMA" },
+      { "id": 10015, "codItem": "OFIC-002", "descripcion": "Bolígrafos Azules x12", "cantidad": 100, "lote": "OFC-2024-02", "codigoBarra": "7506666555002", "sku": "OFIC-002", "codigoFabrica": "BIC-BA-12", "codigoSistema": "SAP-OFIC-002", "unidadMedida": "CAJA" }
+    ]
+  }
+]

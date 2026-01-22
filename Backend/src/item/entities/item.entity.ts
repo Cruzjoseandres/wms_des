@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { DetalleIngreso } from '../../detalle_ingreso/entities/detalle_ingreso.entity';
+import { Proveedor } from '../../proveedor/entities/proveedor.entity';
 
 @Entity('item')
 export class Item {
@@ -29,10 +30,29 @@ export class Item {
   @Column({ name: 'stock', type: 'decimal', precision: 12, scale: 2, default: 0 })
   stock: number;
 
+  // --- CAMPOS ADICIONALES (no mostrados en frontend todavía) ---
+  @Column({ name: 'codigo_barra', length: 50, nullable: true })
+  codigoBarra: string;
+
+  @Column({ name: 'codigo_fabrica', length: 50, nullable: true })
+  codigoFabrica: string;
+
+  @Column({ name: 'codigo_producto', length: 50, nullable: true })
+  codigoProducto: string;
+
   @CreateDateColumn({ name: 'created_at', select: false })
   createdAt: Date;
 
   // Relación con DetalleIngreso
   @OneToMany(() => DetalleIngreso, (detalle: DetalleIngreso) => detalle.item)
   detallesIngreso: DetalleIngreso[];
+
+  // Relación Many-to-Many con Proveedores
+  @ManyToMany(() => Proveedor, (proveedor) => proveedor.items)
+  @JoinTable({
+    name: 'item_proveedor',
+    joinColumn: { name: 'item_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'proveedor_id', referencedColumnName: 'id' },
+  })
+  proveedores: Proveedor[];
 }
