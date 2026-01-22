@@ -29,8 +29,8 @@ services:
     name: wms-frontend
     runtime: node
     rootDir: Frontend
-    buildCommand: npm install --legacy-peer-deps && npm run build
-    startCommand: npm start
+    buildCommand: npm install --legacy-peer-deps && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public
+    startCommand: node .next/standalone/server.js
     envVars:
       - key: NODE_VERSION
         value: "20"
