@@ -4,7 +4,7 @@ services:
     name: wms-backend
     runtime: node
     rootDir: Backend
-    buildCommand: yarn install && yarn build
+    buildCommand: yarn install && yarn build && yarn seed
     startCommand: yarn start:prod
     envVars:
       - key: NODE_VERSION
