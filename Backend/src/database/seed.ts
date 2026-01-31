@@ -11,6 +11,9 @@ import { StockInventario } from '../stock_inventario/entities/stock_inventario.e
 import { Inventario } from '../inventario/entities/inventario.entity';
 import { HistorialEstado } from '../historial_estado/entities/historial_estado.entity';
 import { Proveedor } from '../proveedor/entities/proveedor.entity';
+import * as bwipjs from 'bwip-js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Script de Seeders Completos para WMS
@@ -742,6 +745,53 @@ async function seed() {
     console.log('\n📌 Códigos de barra para pruebas:');
     console.log('  ├── VALIDAR: 7501234567890, 7509876543210, 7502222111000');
     console.log('  └── ALMACENAR: 7503333222000, 7503333222001');
+
+    // =======================
+    // 10. GENERACIÓN DE IMÁGENES DE CÓDIGOS DE BARRA
+    // =======================
+    console.log('\n🖨️ [10/10] Generando imágenes de códigos de barra (Code-128)...');
+
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'barcodes');
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log(`  ✓ Directorio creado: ${uploadsDir}`);
+    }
+
+    const allItemsForBarcodes = await itemRepo.find();
+    let generatedCount = 0;
+
+    for (const item of allItemsForBarcodes) {
+        if (item.codigoBarra) {
+            const fileName = path.join(uploadsDir, `${item.codigoBarra}.png`);
+
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    bwipjs.toBuffer({
+                        bcid: 'code128',       // Barcode type
+                        text: item.codigoBarra,    // Text to encode
+                        scale: 3,              // 3x scaling factor
+                        height: 10,            // Bar height, in millimeters
+                        includetext: true,     // Show human-readable text
+                        textxalign: 'center',  // Always good to set this
+                    }, (err, png) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            fs.writeFile(fileName, png, (err) => {
+                                if (err) reject(err);
+                                else resolve();
+                            });
+                        }
+                    });
+                });
+                // console.log(`    Generado: ${item.codigoBarra}.png`);
+                generatedCount++;
+            } catch (e) {
+                console.error(`    ❌ Error generando ${item.codigoBarra}:`, e);
+            }
+        }
+    }
+    console.log(`  ✓ Generadas ${generatedCount} imágenes en ${uploadsDir}`);
 
     await app.close();
     process.exit(0);
