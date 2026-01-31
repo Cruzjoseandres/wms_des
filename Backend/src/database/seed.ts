@@ -6,7 +6,7 @@ import { Item } from '../item/entities/item.entity';
 import { DocumentoOrigen } from '../documento_origen/entities/documento_origen.entity';
 import { ItemDocumentoOrigen } from '../item_documento_origen/entities/item_documento_origen.entity';
 import { NotaIngreso } from '../nota_ingreso/entities/nota_ingreso.entity';
-import { DetalleIngreso, ProductCodes } from '../detalle_ingreso/entities/detalle_ingreso.entity';
+import { DetalleIngreso } from '../detalle_ingreso/entities/detalle_ingreso.entity';
 import { StockInventario } from '../stock_inventario/entities/stock_inventario.entity';
 import { Inventario } from '../inventario/entities/inventario.entity';
 import { HistorialEstado } from '../historial_estado/entities/historial_estado.entity';
@@ -35,7 +35,7 @@ interface DetalleData {
     lote: string;
     fechaVencimiento?: Date | null;
     ubicacionFinal?: string;
-    productCodes?: ProductCodes;
+
 }
 
 interface NotaData {
@@ -173,7 +173,7 @@ async function seed() {
             await itemRepo.save(item);
             console.log(`  → Actualizado: ${data.descripcion}`);
         }
-        
+
         // Asignar proveedor al item
         if (data.proveedorCodigo && proveedores[data.proveedorCodigo]) {
             const proveedor = proveedores[data.proveedorCodigo];
@@ -386,8 +386,8 @@ async function seed() {
             usuarioCreacion: 'SISTEMA',
             almacenCodigo: 'ALM-CENT',
             detalles: [
-                { codItem: 'FARM-004', cantidad: 50, cantidadEsperada: 50, lote: 'LOTE-M001', fechaVencimiento: new Date('2026-06-30'), productCodes: { barcode: '7501234567890', sku: 'FARM-004' } },
-                { codItem: 'ELEC-003', cantidad: 100, cantidadEsperada: 100, lote: 'LOTE-M002', productCodes: { barcode: '7509876543210', sku: 'ELEC-003' } },
+                { codItem: 'FARM-004', cantidad: 50, cantidadEsperada: 50, lote: 'LOTE-M001', fechaVencimiento: new Date('2026-06-30') },
+                { codItem: 'ELEC-003', cantidad: 100, cantidadEsperada: 100, lote: 'LOTE-M002' },
             ],
         },
         {
@@ -398,7 +398,7 @@ async function seed() {
             usuarioCreacion: 'SISTEMA',
             almacenCodigo: 'ALM-CENT',
             detalles: [
-                { codItem: 'ALIM-005', cantidad: 200, cantidadEsperada: 200, lote: 'LOTE-A100', fechaVencimiento: new Date('2025-08-15'), productCodes: { barcode: '7502222111000', sku: 'ALIM-005' } },
+                { codItem: 'ALIM-005', cantidad: 200, cantidadEsperada: 200, lote: 'LOTE-A100', fechaVencimiento: new Date('2025-08-15') },
             ],
         },
         {
@@ -410,8 +410,8 @@ async function seed() {
             usuarioValidacion: 'OPERARIO1',
             almacenCodigo: 'ALM-CENT',
             detalles: [
-                { codItem: 'PROD-001', cantidad: 30, cantidadEsperada: 30, lote: 'LOTE-P001', productCodes: { barcode: '7503333222000', sku: 'PROD-001' } },
-                { codItem: 'PROD-002', cantidad: 25, cantidadEsperada: 25, lote: 'LOTE-P002', productCodes: { barcode: '7503333222001', sku: 'PROD-002' } },
+                { codItem: 'PROD-001', cantidad: 30, cantidadEsperada: 30, lote: 'LOTE-P001' },
+                { codItem: 'PROD-002', cantidad: 25, cantidadEsperada: 25, lote: 'LOTE-P002' },
             ],
         },
         {
@@ -459,7 +459,7 @@ async function seed() {
                     lote: detalleData.lote,
                     fechaVencimiento: detalleData.fechaVencimiento || undefined,
                     ubicacionFinal: detalleData.ubicacionFinal,
-                    productCodes: detalleData.productCodes,
+
                     notaIngreso: nota,
                 }));
             }
@@ -496,8 +496,23 @@ async function seed() {
             { sku: 'OFIC-002', ubicacion: 'F-01-01-02', cantidad: 100, estado: 'DISPONIBLE' },
         ];
 
+        const itemsMap = new Map<string, Item>();
+        // Cargar items para buscar por código
+        const allItems = await itemRepo.find();
+        allItems.forEach(i => itemsMap.set(i.codigo, i));
+
         for (const data of stockData) {
-            await stockRepo.save(stockRepo.create(data));
+            const item = itemsMap.get(data.sku);
+            if (item) {
+                await stockRepo.save(stockRepo.create({
+                    item: item,
+                    ubicacion: data.ubicacion,
+                    cantidad: data.cantidad,
+                    estado: data.estado
+                }));
+            } else {
+                console.log(`  ⚠ Item ${data.sku} no encontrado para stock seed`);
+            }
         }
         console.log(`  ✓ Creados ${stockData.length} registros de stock`);
     } else {

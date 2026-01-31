@@ -1,60 +1,13 @@
 import { API_ENDPOINTS } from "./config";
+import type {
+    OrdenMovil,
+    ValidarResponse,
+    AlmacenarResponse,
+} from "@/lib/models";
 
 /**
  * Servicio para operaciones móviles (PDA/Scanner)
- * Conecta con /api/movil
  */
-
-export interface OrdenMovilBackend {
-    id: number;
-    nroDocumento: string;
-    origen: string;
-    estado: string;
-    createdAt: string;
-    validatedAt?: string;
-    almacen: {
-        id: number;
-        codigo: string;
-        descripcion: string;
-    };
-    detalles: Array<{
-        id: number;
-        codItem: string;
-        cantidad: number;
-        lote: string | null;
-        productCodes: {
-            barcode?: string;
-            sku?: string;
-        } | null;
-    }>;
-}
-
-export interface ValidarResponse {
-    exito: boolean;
-    mensaje: string;
-    orden: {
-        id: number;
-        nroDocumento: string;
-        estado: string;
-    };
-    siguientePaso: string;
-}
-
-export interface AlmacenarResponse {
-    exito: boolean;
-    mensaje: string;
-    orden: {
-        id: number;
-        nroDocumento: string;
-        estado: string;
-    };
-    stock: {
-        sku: string;
-        ubicacion: string;
-        cantidad: number;
-    };
-}
-
 export const MovilService = {
     /**
      * Valida un item por código de barra (Operario 1)
@@ -81,7 +34,6 @@ export const MovilService = {
     /**
      * Almacena un item en una ubicación (Operario 2)
      * Cambia estado: VALIDADO → ALMACENADO
-     * Registra stock en inventory
      */
     async almacenar(codigoBarra: string, ubicacionDestino: string, usuarioId?: string): Promise<AlmacenarResponse> {
         const res = await fetch(`${API_ENDPOINTS.movil}/almacenar`, {
@@ -105,7 +57,7 @@ export const MovilService = {
     /**
      * Obtiene órdenes pendientes de validar
      */
-    async getOrdenesPorValidar(): Promise<OrdenMovilBackend[]> {
+    async getOrdenesPorValidar(): Promise<OrdenMovil[]> {
         const res = await fetch(`${API_ENDPOINTS.movil}/ordenes/por-validar`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -119,7 +71,7 @@ export const MovilService = {
     /**
      * Obtiene órdenes pendientes de almacenar
      */
-    async getOrdenesPorAlmacenar(): Promise<OrdenMovilBackend[]> {
+    async getOrdenesPorAlmacenar(): Promise<OrdenMovil[]> {
         const res = await fetch(`${API_ENDPOINTS.movil}/ordenes/por-almacenar`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },

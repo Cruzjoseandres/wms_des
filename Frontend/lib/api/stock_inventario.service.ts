@@ -1,33 +1,14 @@
 import { API_ENDPOINTS } from "./config";
+import type { StockInventario } from "@/lib/models";
 
 /**
- * Servicio para consultar stock de inventario por ubicación
- * Conecta con /stock-inventario
+ * Servicio para Stock de Inventario
  */
-
-export interface DetalleIngresoRef {
-    id: number;
-    codItem: string;
-    lote: string | null;
-    fechaVencimiento: string | null;
-    cantidad: number;
-}
-
-export interface StockInventarioBackend {
-    id: number;
-    sku: string;
-    ubicacion: string;
-    cantidad: number;
-    estado: string; // DISPONIBLE, BLOQUEADO
-    ultimoMovimiento: string;
-    detalleIngreso: DetalleIngresoRef | null;
-}
-
 export const StockInventarioService = {
     /**
      * Obtiene todo el stock
      */
-    async getAll(): Promise<StockInventarioBackend[]> {
+    async getAll(): Promise<StockInventario[]> {
         const res = await fetch(API_ENDPOINTS.stockInventario, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -41,7 +22,7 @@ export const StockInventarioService = {
     /**
      * Obtiene stock disponible (no bloqueado)
      */
-    async getDisponible(): Promise<StockInventarioBackend[]> {
+    async getDisponible(): Promise<StockInventario[]> {
         const res = await fetch(`${API_ENDPOINTS.stockInventario}/disponible`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -53,22 +34,22 @@ export const StockInventarioService = {
     },
 
     /**
-     * Obtiene stock por SKU
+     * Obtiene stock por Item ID
      */
-    async getBySku(sku: string): Promise<StockInventarioBackend[]> {
-        const res = await fetch(`${API_ENDPOINTS.stockInventario}/por-sku/${encodeURIComponent(sku)}`, {
+    async getByItemId(itemId: number): Promise<StockInventario[]> {
+        const res = await fetch(`${API_ENDPOINTS.stockInventario}/por-item/${itemId}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
         });
 
-        if (!res.ok) throw new Error("Error al obtener stock por SKU");
+        if (!res.ok) throw new Error("Error al obtener stock por Item");
         return await res.json();
     },
 
     /**
      * Obtiene stock por ubicación
      */
-    async getByUbicacion(ubicacion: string): Promise<StockInventarioBackend[]> {
+    async getByUbicacion(ubicacion: string): Promise<StockInventario[]> {
         const res = await fetch(`${API_ENDPOINTS.stockInventario}/por-ubicacion/${encodeURIComponent(ubicacion)}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },

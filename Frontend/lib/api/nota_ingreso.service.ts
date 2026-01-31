@@ -1,125 +1,65 @@
 import { API_ENDPOINTS } from "./config";
+import type {
+  NotaIngreso,
+  NotaIngresoFrontend,
+  CreateNotaIngresoPayload,
+  EstadoIngreso,
+} from "@/lib/models";
 
-// Interfaces que reflejan la estructura real del backend
-export interface ProductCodesBackend {
-  barcode?: string;
-  sku?: string;
-  factoryCode?: string;
-  systemCode?: string;
-}
-
-export interface DetalleBackend {
-  id: number;
-  codItem: string;
-  cantidad: number;
-  cantidadEsperada: number;
-  lote: string | null;
-  fechaVencimiento: string | null;
-  serie: string | null;
-  productCodes: ProductCodesBackend | null;
-  ubicacionSugerida: string | null;
-  ubicacionFinal: string | null;
-}
-
-export interface AlmacenBackend {
-  id: number;
-  codigo: string;
-  descripcion: string;
-  sucursalId?: number;
-  estado?: number;
-}
-
-export interface NotaIngresoBackend {
-  id: number;
-  nroDocumento: string;
-  fechaIngreso: string;
-  origen: string;
-  usuarioCreacion: string;
-  usuarioValidacion: string | null;
-  usuarioAlmacenaje: string | null;
-  validatedAt: string | null;
-  storedAt: string | null;
-  estado: number; // 0: Paletizado, 1: Validado, 2: Almacenado, 3: Anulado
-  almacen: AlmacenBackend;
-  detalles: DetalleBackend[];
-  observacion: string | null;
-  sourceDocId: number | null;
-  createdAt: string;
-}
-
-// Mapeo de estados numéricos a strings para el frontend
-const estadoMap: Record<number, string> = {
+// Mapeo de estados numéricos a strings
+const estadoMap: Record<number, EstadoIngreso> = {
   0: "paletizado",
   1: "validado",
   2: "almacenado",
   3: "anulado",
 };
 
-// Función para mapear datos del backend al formato del frontend store
-export function mapBackendToFrontend(nota: NotaIngresoBackend) {
+/**
+ * Mapea una NotaIngreso del backend al formato del frontend
+ */
+export function mapBackendToFrontend(nota: NotaIngreso): NotaIngresoFrontend {
   return {
     id: String(nota.id),
     documento: nota.nroDocumento,
-    tipo: "produccion" as const,
-    origen: nota.origen || "",
-    fecha: nota.fechaIngreso ? new Date(nota.fechaIngreso).toLocaleDateString("es-ES") : "",
+    tipo: "produccion",
+    origen: nota.origen,
+    fecha: new Date(nota.fechaIngreso).toLocaleDateString("es-ES"),
     items: nota.detalles.map((d) => ({
       id: String(d.id),
-      producto: d.codItem,
-      descripcion: d.codItem,
+      producto: d.item.codigo,
+      descripcion: d.item.descripcion,
       cantidad: Number(d.cantidad),
-      cantidadEsperada: Number(d.cantidadEsperada) || Number(d.cantidad),
-      lote: d.lote || "",
-      vencimiento: d.fechaVencimiento || "",
-      productCodes: d.productCodes,
-      ubicacionSugerida: d.ubicacionSugerida || "",
-      ubicacionFinal: d.ubicacionFinal || "",
+      cantidadEsperada: Number(d.cantidadEsperada),
+      lote: d.lote,
+      vencimiento: d.fechaVencimiento,
+      codigoBarra: d.item.codigoBarra,
+      codigoFabrica: d.item.codigoFabrica,
+      ubicacionSugerida: d.ubicacionSugerida,
+      ubicacionFinal: d.ubicacionFinal,
     })),
-    estado: (estadoMap[nota.estado] || "paletizado") as "paletizado" | "validado" | "almacenado" | "anulado",
-    observaciones: nota.observacion || "",
+    estado: estadoMap[nota.estado],
+    observaciones: nota.observacion,
     usuarioCreacion: nota.usuarioCreacion,
-    usuarioValidacion: nota.usuarioValidacion || undefined,
-    usuarioAlmacenaje: nota.usuarioAlmacenaje || undefined,
+    usuarioValidacion: nota.usuarioValidacion,
+    usuarioAlmacenaje: nota.usuarioAlmacenaje,
     validatedAt: nota.validatedAt,
     storedAt: nota.storedAt,
-    almacenId: nota.almacen ? String(nota.almacen.id) : "",
+    almacenId: String(nota.almacen.id),
     sourceDocId: nota.sourceDocId,
   };
 }
 
-export interface CreateDetallePayload {
-  productoId: string;
-  cantidad: number;
-  cantidadEsperada?: number;
-  lote?: string;
-  fechaVencimiento?: string;
-  serie?: string;
-  productCodes?: ProductCodesBackend;
-  ubicacionSugerida?: string;
-}
-
-export interface CreateIngresoPayload {
-  nroDocumento: string;
-  origen: string;
-  almacenId: number;
-  usuario?: string;
-  sourceDocId?: number;
-  fechaInicio?: string;
-  fechaFin?: string;
-  detalles: CreateDetallePayload[];
-}
-
-// 3. El Servicio con los métodos estáticos
+/**
+ * Servicio para Notas de Ingreso
+ */
 export const NotaIngresoService = {
   /**
-   * Obtiene todos los ingresos (Listado)
+   * Obtiene todas las notas de ingreso
    */
-  async getAll(): Promise<NotaIngresoBackend[]> {
+  async getAll(): Promise<NotaIngreso[]> {
     const res = await fetch(API_ENDPOINTS.notaIngreso, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       cache: "no-store",
     });
 
@@ -131,23 +71,21 @@ export const NotaIngresoService = {
   },
 
   /**
-   * Obtiene un ingreso por ID (Detalle)
+   * Obtiene una nota de ingreso por ID
    */
-  async getById(id: number): Promise<NotaIngresoBackend> {
+  async getById(id: number): Promise<NotaIngreso> {
     const res = await fetch(`${API_ENDPOINTS.notaIngreso}/${id}`);
     if (!res.ok) throw new Error("Ingreso no encontrado");
     return await res.json();
   },
 
   /**
-   * Crea un nuevo ingreso
+   * Crea una nueva nota de ingreso
    */
-  async create(payload: CreateIngresoPayload): Promise<NotaIngresoBackend> {
+  async create(payload: CreateNotaIngresoPayload): Promise<NotaIngreso> {
     const res = await fetch(API_ENDPOINTS.notaIngreso, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -160,17 +98,12 @@ export const NotaIngresoService = {
   },
 
   /**
-   * Actualiza el estado de un ingreso
-   * @param id - ID de la nota de ingreso
-   * @param estado - Nuevo estado (0: paletizado, 1: validado, 2: almacenado, 3: anulado)
-   * @param usuario - Usuario que realiza el cambio (opcional)
+   * Actualiza el estado de una nota de ingreso
    */
-  async updateEstado(id: number, estado: number, usuario?: string): Promise<NotaIngresoBackend> {
+  async updateEstado(id: number, estado: number, usuario?: string): Promise<NotaIngreso> {
     const res = await fetch(`${API_ENDPOINTS.notaIngreso}/${id}/estado`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estado, usuario }),
     });
 

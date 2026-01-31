@@ -1,43 +1,17 @@
 import { API_ENDPOINTS } from "./config";
+import type {
+    DocumentoOrigen,
+    CrearDesdeDocumentoPayload,
+} from "@/lib/models";
 
 /**
- * Servicio para documentos de origen (SAP, API externa)
- * Conecta con /documento-origen y /api/ingreso
+ * Servicio para Documentos de Origen (SAP, API externa)
  */
-
-export interface ItemDocumentoOrigenBackend {
-    id: number;
-    codigoBarra: string;
-    sku: string;
-    codigoFabrica: string;
-    codigoSistema: string;
-    descripcion: string;
-    cantidadTotal: number;
-    unidadMedida: string;
-}
-
-export interface DocumentoOrigenBackend {
-    id: number;
-    nroDocumento: string;
-    descripcion: string;
-    origen: string; // SAP, MANUAL, API
-    estado: string; // PENDIENTE, PROCESADO
-    datosRaw: Record<string, unknown> | null;
-    createdAt: string;
-    items: ItemDocumentoOrigenBackend[];
-}
-
-export interface CrearDesdeDocumentoPayload {
-    documentoId: number;
-    almacenId: number;
-    usuario?: string;
-}
-
 export const DocumentoOrigenService = {
     /**
      * Obtiene todos los documentos
      */
-    async getAll(): Promise<DocumentoOrigenBackend[]> {
+    async getAll(): Promise<DocumentoOrigen[]> {
         const res = await fetch(API_ENDPOINTS.documentoOrigen, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -51,7 +25,7 @@ export const DocumentoOrigenService = {
     /**
      * Obtiene documentos pendientes de procesar
      */
-    async getPendientes(): Promise<DocumentoOrigenBackend[]> {
+    async getPendientes(): Promise<DocumentoOrigen[]> {
         const res = await fetch(`${API_ENDPOINTS.documentoOrigen}/pendientes`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -65,7 +39,7 @@ export const DocumentoOrigenService = {
     /**
      * Busca documentos por número o descripción
      */
-    async buscar(query: string): Promise<DocumentoOrigenBackend[]> {
+    async buscar(query: string): Promise<DocumentoOrigen[]> {
         const res = await fetch(`${API_ENDPOINTS.documentoOrigen}/buscar?q=${encodeURIComponent(query)}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -79,7 +53,7 @@ export const DocumentoOrigenService = {
     /**
      * Obtiene un documento por número
      */
-    async getByNumero(nroDocumento: string): Promise<DocumentoOrigenBackend | null> {
+    async getByNumero(nroDocumento: string): Promise<DocumentoOrigen | null> {
         const res = await fetch(`${API_ENDPOINTS.documentoOrigen}/${encodeURIComponent(nroDocumento)}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -91,7 +65,6 @@ export const DocumentoOrigenService = {
 
     /**
      * Crea una orden de ingreso desde un documento de origen
-     * Usa el endpoint /api/ingreso/crear
      */
     async crearOrdenDesdeDocumento(payload: CrearDesdeDocumentoPayload): Promise<unknown> {
         const res = await fetch(`${API_ENDPOINTS.ingresoApi}/crear`, {

@@ -1,39 +1,11 @@
 import { API_ENDPOINTS } from "./config";
+import type { DocumentoExterno, TipoFuenteDocumento } from "@/lib/models";
 
-export interface DetalleDocumentoExterno {
-    id: number;
-    codItem: string;
-    descripcion: string;
-    cantidad: string | number;
-    lote?: string | null;
-    fechaVencimiento?: string | null;
-    codigoBarra?: string | null;
-    sku?: string | null;
-    codigoFabrica?: string | null;
-    codigoSistema?: string | null;
-    unidadMedida?: string;
-    createdAt?: string;
-}
-
-export interface DocumentoExterno {
-    id: number;
-    nroDocumento: string;
-    tipoFuente: "API_ERP" | "MANUAL";
-    proveedor: string;
-    fechaDocumento?: string;
-    descripcion?: string;
-    estado?: string;
-    datosRaw?: Record<string, unknown>;
-    createdAt?: string;
-    items: DetalleDocumentoExterno[];
-}
-
-// Cache para los documentos de API ERP (cargados del JSON local)
+// Cache para los documentos de API ERP
 let apiErpDocumentsCache: DocumentoExterno[] | null = null;
 
 /**
  * Carga los documentos de la API ERP desde el archivo JSON local
- * Simula una respuesta de sistema externo (SAP, Oracle, etc.)
  */
 async function loadApiErpDocuments(): Promise<DocumentoExterno[]> {
     if (apiErpDocumentsCache) {
@@ -42,7 +14,7 @@ async function loadApiErpDocuments(): Promise<DocumentoExterno[]> {
 
     try {
         const res = await fetch("/api-erp-documents.json", {
-            cache: "no-store"
+            cache: "no-store",
         });
 
         if (!res.ok) {
@@ -59,29 +31,31 @@ async function loadApiErpDocuments(): Promise<DocumentoExterno[]> {
 }
 
 /**
- * Invalida el cache de documentos API ERP (útil para pruebas)
+ * Invalida el cache de documentos API ERP
  */
 export function invalidateApiErpCache(): void {
     apiErpDocumentsCache = null;
 }
 
+/**
+ * Servicio para Documentos Externos
+ */
 export const DocumentoExternoService = {
     /**
-     * Lista documentos externos con filtro opcional.
-     * - API_ERP: Lee del archivo JSON local (simula API externa)
-     * - MANUAL: Lee del backend/base de datos
+     * Lista documentos externos con filtro opcional
      */
-    async listar(filtro?: string, tipo?: "API_ERP" | "MANUAL"): Promise<DocumentoExterno[]> {
+    async listar(filtro?: string, tipo?: TipoFuenteDocumento): Promise<DocumentoExterno[]> {
         // Si es API_ERP, leer del JSON local
         if (tipo === "API_ERP") {
             const docs = await loadApiErpDocuments();
             if (!filtro) return docs;
 
             const filtroLower = filtro.toLowerCase();
-            return docs.filter(doc =>
-                doc.nroDocumento.toLowerCase().includes(filtroLower) ||
-                doc.descripcion?.toLowerCase().includes(filtroLower) ||
-                doc.proveedor?.toLowerCase().includes(filtroLower)
+            return docs.filter(
+                (doc) =>
+                    doc.nroDocumento.toLowerCase().includes(filtroLower) ||
+                    doc.descripcion?.toLowerCase().includes(filtroLower) ||
+                    doc.proveedor?.toLowerCase().includes(filtroLower)
             );
         }
 
@@ -96,9 +70,7 @@ export const DocumentoExternoService = {
 
         const res = await fetch(url, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             cache: "no-store",
         });
 
@@ -111,15 +83,13 @@ export const DocumentoExternoService = {
     },
 
     /**
-     * Busca un documento externo por número y tipo de fuente.
-     * - API_ERP: Busca en el archivo JSON local
-     * - MANUAL: Busca en el backend/base de datos
+     * Busca un documento externo por número y tipo de fuente
      */
-    async buscar(numero: string, tipo: "API_ERP" | "MANUAL"): Promise<DocumentoExterno> {
+    async buscar(numero: string, tipo: TipoFuenteDocumento): Promise<DocumentoExterno> {
         // Si es API_ERP, buscar en el JSON local
         if (tipo === "API_ERP") {
             const docs = await loadApiErpDocuments();
-            const doc = docs.find(d =>
+            const doc = docs.find((d) =>
                 d.nroDocumento.toLowerCase().includes(numero.toLowerCase())
             );
 
@@ -131,16 +101,11 @@ export const DocumentoExternoService = {
         }
 
         // Si es MANUAL, ir al backend
-        const params = new URLSearchParams({
-            numero,
-            tipo,
-        });
+        const params = new URLSearchParams({ numero, tipo });
 
         const res = await fetch(`${API_ENDPOINTS.documentosExternos}/buscar?${params.toString()}`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             cache: "no-store",
         });
 
@@ -155,4 +120,3 @@ export const DocumentoExternoService = {
         return await res.json();
     },
 };
-

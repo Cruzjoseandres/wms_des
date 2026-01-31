@@ -15,6 +15,7 @@ import { StockInventarioModule } from './stock_inventario/stock_inventario.modul
 import { HistorialEstadoModule } from './historial_estado/historial_estado.module';
 import { IngresoApiModule } from './ingreso_api/ingreso_api.module';
 import { ProveedorModule } from './proveedor/proveedor.module';
+// import { SucursalModule } from './sucursal/sucursal.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ProveedorModule } from './proveedor/proveedor.module';
     HistorialEstadoModule,
     IngresoApiModule,
     ProveedorModule,
+    // SucursalModule,
   ],
   controllers: [AppController],
   providers: [AppService],

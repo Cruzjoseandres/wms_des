@@ -16,40 +16,24 @@ export enum EstadoIngreso {
   ANULADO = 3,
 }
 
-/**
- * Tipos de ingreso permitidos
- */
-export enum TipoIngreso {
-  PRODUCCION = 'produccion',
-  TRASPASO = 'traspaso',
-  IMPORTACION = 'importacion',
-  REINGRESO = 'reingreso',
-  ANULACION_TOTAL = 'anulacion_total',
-  ANULACION_PARCIAL = 'anulacion_parcial',
-  CAMBIO_PRODUCTO = 'cambio_producto',
-}
-
 @Entity('nota_ingreso')
 export class NotaIngreso {
   @PrimaryGeneratedColumn()
   id: number;
 
   // Usa el nombre de columna existente 'nro_doc'
-  @Column({ name: 'nro_doc', unique: true, length: 25, nullable: true })
+  @Column({ name: 'nro_documento', unique: true, length: 25, nullable: true })
   nroDocumento: string;
 
-  @Column({ name: 'fecha_ingr', type: 'timestamp' })
+  @Column({ name: 'fecha_ingreso', type: 'timestamp' })
   fechaIngreso: Date;
 
-  @Column({ name: 'obs_origen', length: 120, nullable: true })
+  @Column({ name: 'origen', length: 120, nullable: true })
   origen: string;
-
-  @Column({ name: 'tipo_ingreso', length: 30, nullable: true })
-  tipoIngreso: string; // produccion, traspaso, importacion, etc.
 
   // --- CAMPOS DE AUDITORÍA ---
   // Usa el nombre de columna existente 'usuario' para compatibilidad
-  @Column({ name: 'usuario', length: 29, nullable: true })
+  @Column({ name: 'usuario_creacion', length: 29, nullable: true })
   usuarioCreacion: string;
 
   // Nuevas columnas - nullable para no romper datos existentes
@@ -81,7 +65,7 @@ export class NotaIngreso {
 
   // Relación con Almacen
   @ManyToOne(() => Almacen, { nullable: false })
-  @JoinColumn({ name: 'idalmacen' })
+  @JoinColumn({ name: 'almacen_id' })
   almacen: Almacen;
 
   @Column({ name: 'observacion', type: 'text', nullable: true })

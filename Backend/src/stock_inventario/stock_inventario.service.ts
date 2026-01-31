@@ -13,18 +13,19 @@ export class StockInventarioService {
 
     /**
      * Registra stock cuando un item es almacenado
-     * Si ya existe stock en esa ubicación para ese SKU, suma la cantidad
+     * Si ya existe stock en esa ubicación para ese Item, suma la cantidad
      */
     async agregarStock(datos: {
-        sku: string;
+        item: any; // Item entity or { id: number }
         ubicacion: string;
         cantidad: number;
         detalleIngreso?: DetalleIngreso;
     }): Promise<StockInventario> {
         // Buscar si ya existe stock en esa ubicación
+        // Usamos where con itemId si está disponible o relation
         const existente = await this.stockRepo.findOne({
             where: {
-                sku: datos.sku,
+                item: { id: datos.item.id },
                 ubicacion: datos.ubicacion,
             },
         });
@@ -36,7 +37,7 @@ export class StockInventarioService {
         }
 
         const stock = this.stockRepo.create({
-            sku: datos.sku,
+            item: datos.item, // Pasamos el objeto Item o {id}
             ubicacion: datos.ubicacion,
             cantidad: datos.cantidad,
             detalleIngreso: datos.detalleIngreso,
@@ -46,24 +47,24 @@ export class StockInventarioService {
     }
 
     /**
-     * Obtiene stock por SKU (con datos del detalle)
+     * Obtiene stock por Item ID
      */
-    async obtenerPorSku(sku: string): Promise<StockInventario[]> {
+    async obtenerPorItem(itemId: number): Promise<StockInventario[]> {
         return await this.stockRepo.find({
-            where: { sku },
-            relations: ['detalle_ingreso'],
+            where: { item: { id: itemId } },
+            relations: ['detalleIngreso', 'item'],
             order: { ubicacion: 'ASC' },
         });
     }
 
     /**
-     * Obtiene stock por ubicación (con datos del detalle)
+     * Obtiene stock por ubicación
      */
     async obtenerPorUbicacion(ubicacion: string): Promise<StockInventario[]> {
         return await this.stockRepo.find({
             where: { ubicacion },
-            relations: ['detalleIngreso'],
-            order: { sku: 'ASC' },
+            relations: ['detalleIngreso', 'item'],
+            order: { item: { codigo: 'ASC' } }, // Ordenar por código de item
         });
     }
 
@@ -83,7 +84,7 @@ export class StockInventarioService {
         return await this.stockRepo.find({
             where: { estado: 'DISPONIBLE' },
             relations: ['detalleIngreso'],
-            order: { ubicacion: 'ASC', sku: 'ASC' },
+            order: { ubicacion: 'ASC', item: { codigo: 'ASC' } },
         });
     }
 

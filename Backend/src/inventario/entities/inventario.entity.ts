@@ -16,10 +16,10 @@ export class Inventario {
     estado: string; // Abierto, En Proceso, Cerrado
 
     @Column({ name: 'fecha_apertura', type: 'date' })
-    fechaApertura: string;
+    fechaApertura: Date;
 
     @Column({ name: 'fecha_cierre', type: 'date', nullable: true })
-    fechaCierre: string;
+    fechaCierre: Date;
 
     @Column({ name: 'bodega', nullable: true })
     bodega: string;

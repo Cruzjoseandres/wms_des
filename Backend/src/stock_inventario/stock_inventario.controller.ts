@@ -24,12 +24,12 @@ export class StockInventarioController {
     }
 
     /**
-     * GET /stock-inventario/por-sku/:sku
-     * Obtiene stock por SKU
+     * GET /stock-inventario/por-item/:itemId
+     * Obtiene stock por Item ID
      */
-    @Get('por-sku/:sku')
-    obtenerPorSku(@Param('sku') sku: string) {
-        return this.stockInventarioService.obtenerPorSku(sku);
+    @Get('por-item/:itemId')
+    obtenerPorItem(@Param('itemId') itemId: number) {
+        return this.stockInventarioService.obtenerPorItem(itemId);
     }
 
     /**

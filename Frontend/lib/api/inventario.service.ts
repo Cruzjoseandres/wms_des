@@ -1,44 +1,17 @@
 import { API_ENDPOINTS } from "./config";
+import type { Inventario, CreateInventarioPayload } from "@/lib/models";
 
-export interface InventarioBackend {
-    id: number;
-    codigo: string;
-    tipo: string;
-    estado: string;
-    fechaApertura: string;
-    fechaCierre: string | null;
-    bodega: string | null;
-    itemsContados: number;
-    itemsTotales: number;
-    diferencias: number;
-    responsable: string;
-    almacen: {
-        id: number;
-        codigo: string;
-        descripcion: string;
-    };
-}
-
-export interface CreateInventarioPayload {
-    codigo: string;
-    tipo: string;
-    fechaApertura: string;
-    almacenId: number;
-    bodega?: string;
-    responsable: string;
-    itemsTotales: number;
-}
-
+/**
+ * Servicio para Inventarios
+ */
 export const InventarioService = {
     /**
      * Obtiene todos los inventarios
      */
-    async getAll(): Promise<InventarioBackend[]> {
+    async getAll(): Promise<Inventario[]> {
         const res = await fetch(API_ENDPOINTS.inventario, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             cache: "no-store",
         });
 
@@ -52,12 +25,10 @@ export const InventarioService = {
     /**
      * Crea un nuevo inventario
      */
-    async create(payload: CreateInventarioPayload): Promise<InventarioBackend> {
+    async create(payload: CreateInventarioPayload): Promise<Inventario> {
         const res = await fetch(API_ENDPOINTS.inventario, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
         });
 
@@ -70,14 +41,12 @@ export const InventarioService = {
     },
 
     /**
-     * Actualiza un inventario (para cambio de estado o cierre)
+     * Actualiza un inventario
      */
-    async update(id: number, payload: Partial<InventarioBackend>): Promise<InventarioBackend> {
+    async update(id: number, payload: Partial<Inventario>): Promise<Inventario> {
         const res = await fetch(`${API_ENDPOINTS.inventario}/${id}`, {
             method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
         });
 

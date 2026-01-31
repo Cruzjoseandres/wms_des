@@ -8,16 +8,6 @@ import {
 import { NotaIngreso } from '../../nota_ingreso/entities/nota_ingreso.entity';
 import { Item } from '../../item/entities/item.entity';
 
-/**
- * Estructura para almacenar múltiples códigos de producto
- */
-export interface ProductCodes {
-  barcode?: string;
-  sku?: string;
-  factoryCode?: string;
-  systemCode?: string;
-}
-
 @Entity('detalle_ingreso')
 export class DetalleIngreso {
   @PrimaryGeneratedColumn()
@@ -26,9 +16,8 @@ export class DetalleIngreso {
   @Column({ name: 'cod_item', length: 40 })
   codItem: string;
 
-  // Almacena múltiples códigos del producto (barcode, sku, factory_code, etc.)
-  @Column({ name: 'product_codes', type: 'jsonb', nullable: true })
-  productCodes: ProductCodes;
+  // Se eliminó product_codes por redundancia. Usar item.codigoBarra
+
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   cantidad: number;

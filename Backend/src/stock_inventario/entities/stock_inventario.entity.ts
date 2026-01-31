@@ -7,6 +7,7 @@ import {
     JoinColumn,
 } from 'typeorm';
 import { DetalleIngreso } from '../../detalle_ingreso/entities/detalle_ingreso.entity';
+import { Item } from '../../item/entities/item.entity';
 
 /**
  * Stock de inventario por ubicación
@@ -14,13 +15,17 @@ import { DetalleIngreso } from '../../detalle_ingreso/entities/detalle_ingreso.e
  * Los datos de lote/vencimiento se obtienen del detalle relacionado
  */
 @Entity('stock_inventario')
-@Index(['sku', 'ubicacion'], { unique: false })
+@Index(['item', 'ubicacion'], { unique: false })
 export class StockInventario {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ length: 50 })
-    sku: string;
+    @ManyToOne(() => Item, { eager: true })
+    @JoinColumn({ name: 'item_id' })
+    item: Item;
+
+    @Column({ name: 'item_id', nullable: true })
+    itemId: number;
 
     @Column({ length: 50 })
     ubicacion: string; // A-01-01, B-02-03

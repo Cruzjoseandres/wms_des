@@ -1,26 +1,4 @@
-import { Type } from 'class-transformer';
-import { IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
-
-/**
- * DTO para los códigos de producto múltiples
- */
-export class ProductCodesDto {
-  @IsString()
-  @IsOptional()
-  barcode?: string;
-
-  @IsString()
-  @IsOptional()
-  sku?: string;
-
-  @IsString()
-  @IsOptional()
-  factoryCode?: string;
-
-  @IsString()
-  @IsOptional()
-  systemCode?: string;
-}
+import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateDetalleIngresoDto {
   @IsString()
@@ -46,12 +24,6 @@ export class CreateDetalleIngresoDto {
   @IsString()
   @IsOptional()
   serie?: string;
-
-  @IsObject()
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => ProductCodesDto)
-  productCodes?: ProductCodesDto;
 
   @IsString()
   @IsOptional()

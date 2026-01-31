@@ -52,7 +52,6 @@ export class NotaIngresoService {
         lote: d.lote,
         fechaVencimiento: d.fechaVencimiento ? new Date(d.fechaVencimiento) : undefined,
         serie: d.serie,
-        productCodes: d.productCodes || null,
       })) as DetalleIngreso[],
     });
 
@@ -80,7 +79,7 @@ export class NotaIngresoService {
 
   async findAll() {
     return await this.notaRepo.find({
-      relations: ['almacen', 'detalles'],
+      relations: ['almacen', 'detalles', 'detalles.item'],
     });
   }
 

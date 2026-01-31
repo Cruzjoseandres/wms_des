@@ -22,12 +22,14 @@ export class MovilService {
      * Solo funciona si la orden está en estado PALETIZADO
      */
     async escanearValidar(codigoBarra: string, usuarioId: string) {
-        // 1. Buscar detalle por codigo de barra en productCodes
+        // 1. Buscar detalle por codigo de barra (join con Item)
         const detalle = await this.detalleRepo
             .createQueryBuilder('d')
             .leftJoinAndSelect('d.notaIngreso', 'nota')
-            .where("d.product_codes->>'barcode' = :codigoBarra", { codigoBarra })
-            .orWhere('d.cod_item = :codigoBarra', { codigoBarra })
+            .leftJoinAndSelect('d.item', 'i') // Join con Item
+            .where("d.cod_item = :codigoBarra", { codigoBarra })
+            .orWhere("i.codigoBarra = :codigoBarra", { codigoBarra }) // Busca en tabla Item
+            .orWhere("i.codigoFabrica = :codigoBarra", { codigoBarra })
             .getOne();
 
         if (!detalle) {
@@ -77,12 +79,13 @@ export class MovilService {
      * Solo funciona si la orden está en estado VALIDADO
      */
     async escanearAlmacenar(codigoBarra: string, ubicacionDestino: string, usuarioId: string) {
-        // 1. Buscar detalle por codigo de barra
+        // 1. Buscar detalle por codigo de barra (join con Item)
         const detalle = await this.detalleRepo
             .createQueryBuilder('d')
             .leftJoinAndSelect('d.notaIngreso', 'nota')
-            .where("d.product_codes->>'barcode' = :codigoBarra", { codigoBarra })
-            .orWhere('d.cod_item = :codigoBarra', { codigoBarra })
+            .leftJoinAndSelect('d.item', 'i')
+            .where("d.cod_item = :codigoBarra", { codigoBarra })
+            .orWhere("i.codigoBarra = :codigoBarra", { codigoBarra })
             .getOne();
 
         if (!detalle) {
@@ -118,9 +121,9 @@ export class MovilService {
         await this.notaRepo.save(orden);
 
         // 3c. Insertar en stock_inventario
-        const sku = detalle.productCodes?.sku || detalle.codItem;
+        // Ahora pasamos el item entero (o su ID)
         await this.stockInventarioService.agregarStock({
-            sku,
+            item: detalle.item || { id: detalle['item_id'] }, // Fallback si no carga la relación pero d.item está en join
             ubicacion: ubicacionDestino,
             cantidad: Number(detalle.cantidad),
             detalleIngreso: detalle,
@@ -144,7 +147,7 @@ export class MovilService {
                 estado: 'ALMACENADO',
             },
             stock: {
-                sku,
+                item: detalle.item ? detalle.item.codigo : 'ID:' + detalle['item_id'], // Retornamos info del item
                 ubicacion: ubicacionDestino,
                 cantidad: detalle.cantidad,
             },
@@ -157,7 +160,7 @@ export class MovilService {
     async obtenerPorValidar() {
         return await this.notaRepo.find({
             where: { estado: EstadoIngreso.PALETIZADO },
-            relations: ['almacen', 'detalles'],
+            relations: ['almacen', 'detalles', 'detalles.item'],
             order: { createdAt: 'DESC' },
         });
     }
@@ -168,7 +171,7 @@ export class MovilService {
     async obtenerPorAlmacenar() {
         return await this.notaRepo.find({
             where: { estado: EstadoIngreso.VALIDADO },
-            relations: ['almacen', 'detalles'],
+            relations: ['almacen', 'detalles', 'detalles.item'],
             order: { validatedAt: 'DESC' },
         });
     }

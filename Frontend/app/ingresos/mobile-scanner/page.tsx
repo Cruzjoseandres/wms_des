@@ -18,7 +18,8 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { MovilService, type OrdenMovilBackend } from "@/lib/api/movil.service"
+import { MovilService } from "@/lib/api/movil.service"
+import type { OrdenMovil } from "@/lib/models"
 
 // --- TYPES ---
 interface DetallePalet {
@@ -43,12 +44,12 @@ interface DocumentoIngreso {
 }
 
 // Helper para mapear órdenes del backend al formato del componente
-function mapOrdenToDocumento(orden: OrdenMovilBackend): DocumentoIngreso {
-    const palets: DetallePalet[] = orden.detalles.map((d, idx) => ({
+function mapOrdenToDocumento(orden: OrdenMovil): DocumentoIngreso {
+    const palets: DetallePalet[] = orden.detalles.map((d) => ({
         id: String(d.id),
-        codigo: d.productCodes?.barcode || d.codItem || `DET-${d.id}`,
-        itemCode: d.codItem,
-        descripcion: d.codItem, // Podría mejorarse con join a items
+        codigo: d.item.codigoBarra || d.item.codigo, // Código de barra o código del item
+        itemCode: d.item.codigo,
+        descripcion: d.item.descripcion,
         cantidad: d.cantidad,
         unidad: "UNID",
         estado: orden.estado === "VALIDADO" ? "Validado" : "Pendiente",
@@ -59,7 +60,7 @@ function mapOrdenToDocumento(orden: OrdenMovilBackend): DocumentoIngreso {
         id: String(orden.id),
         nroDocumento: orden.nroDocumento,
         fecha: new Date(orden.createdAt).toLocaleString("es-ES"),
-        tipoIngreso: orden.origen || "Ingreso",
+        tipoIngreso: orden.origen,
         estadoGlobal: orden.estado === "PALETIZADO" ? "POR VALIDAR" :
             orden.estado === "VALIDADO" ? "POR ALMACENAR" : orden.estado,
         palets,
@@ -75,7 +76,7 @@ export default function MobileScannerPage() {
     // Data State
     const [docQuery, setDocQuery] = useState("")
     const [currentDoc, setCurrentDoc] = useState<DocumentoIngreso | null>(null)
-    const [ordenes, setOrdenes] = useState<OrdenMovilBackend[]>([])
+    const [ordenes, setOrdenes] = useState<OrdenMovil[]>([])
 
     // Work Form State
     const [inputPalet, setInputPalet] = useState("")

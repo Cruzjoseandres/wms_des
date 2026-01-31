@@ -1,26 +1,17 @@
 import { API_ENDPOINTS } from "./config";
+import type { Item } from "@/lib/models";
 
-export interface ItemBackend {
-    id: number;
-    codigo: string;
-    descripcion: string;
-    unidadMedida?: string;
-    precio?: number;
-    codSubcategoria?: string;
-    estado: number;
-    stock?: number;
-}
-
+/**
+ * Servicio para Items del catálogo
+ */
 export const ItemService = {
     /**
      * Obtiene todos los items del catálogo
      */
-    async getAll(): Promise<ItemBackend[]> {
+    async getAll(): Promise<Item[]> {
         const res = await fetch(API_ENDPOINTS.item, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             cache: "no-store",
         });
 
@@ -34,7 +25,7 @@ export const ItemService = {
     /**
      * Obtiene un item por ID
      */
-    async getById(id: number): Promise<ItemBackend> {
+    async getById(id: number): Promise<Item> {
         const res = await fetch(`${API_ENDPOINTS.item}/${id}`);
         if (!res.ok) throw new Error("Item no encontrado");
         return await res.json();
@@ -43,7 +34,7 @@ export const ItemService = {
     /**
      * Busca items por código
      */
-    async searchByCode(codigo: string): Promise<ItemBackend[]> {
+    async searchByCode(codigo: string): Promise<Item[]> {
         const res = await fetch(`${API_ENDPOINTS.item}/search?q=${encodeURIComponent(codigo)}`);
         if (!res.ok) throw new Error("Error al buscar items");
         return await res.json();
