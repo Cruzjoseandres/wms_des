@@ -607,8 +607,26 @@ export default function MobileScannerPage() {
                                     className="h-12 text-lg"
                                 />
                                 <Button
+                                    variant="outline"
+                                    className="h-12 w-12 shrink-0 border-slate-300 text-slate-500 hover:text-primary hover:border-primary"
+                                    onClick={() => {
+                                        toast.info("Zebra Scanner activo: Presione el gatillo físico")
+                                    }}
+                                    title="Zebra Scanner (Hardware)"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+                                        <path d="M3 7V5c0-1.1.9-2 2-2h2" />
+                                        <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
+                                        <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
+                                        <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
+                                        <path d="M7 7h10v10H7z" />
+                                        <path d="M12 17v-6" />
+                                    </svg>
+                                </Button>
+                                <Button
                                     className="h-12 w-12 shrink-0 bg-primary hover:bg-primary/90"
                                     onClick={() => startScanner("doc")}
+                                    title="Cámara"
                                 >
                                     <ScanBarcode className="w-6 h-6" />
                                 </Button>
@@ -695,8 +713,26 @@ export default function MobileScannerPage() {
                                             />
                                         </div>
                                         <Button
+                                            variant="outline"
+                                            className="h-12 w-12 shrink-0 border-slate-300 text-slate-500 hover:text-orange-600 hover:border-orange-600"
+                                            onClick={() => {
+                                                toast.info("Zebra Scanner activo: Presione el gatillo físico")
+                                            }}
+                                            title="Zebra Scanner"
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+                                                <path d="M3 7V5c0-1.1.9-2 2-2h2" />
+                                                <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
+                                                <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
+                                                <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
+                                                <path d="M7 7h10v10H7z" />
+                                                <path d="M12 17v-6" />
+                                            </svg>
+                                        </Button>
+                                        <Button
                                             className="h-12 w-12 bg-orange-500 hover:bg-orange-600 shrink-0"
                                             onClick={() => startScanner("location")}
+                                            title="Cámara"
                                         >
                                             <ScanBarcode className="w-6 h-6" />
                                         </Button>
@@ -722,8 +758,27 @@ export default function MobileScannerPage() {
                                     </div>
 
                                     <Button
+                                        variant="outline"
+                                        className="h-12 w-12 shrink-0 border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-600"
+                                        onClick={() => {
+                                            toast.info("Zebra Scanner activo: Presione el gatillo físico")
+                                        }}
+                                        title="Zebra Scanner"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+                                            <path d="M3 7V5c0-1.1.9-2 2-2h2" />
+                                            <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
+                                            <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
+                                            <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
+                                            <path d="M7 7h10v10H7z" />
+                                            <path d="M12 17v-6" />
+                                        </svg>
+                                    </Button>
+
+                                    <Button
                                         className={cn("h-12 w-12 shrink-0", inputPalet ? "bg-blue-600" : "bg-orange-500")}
                                         onClick={inputPalet && !scannedPaletData ? handleScanPalet : () => startScanner("palet")}
+                                        title="Cámara"
                                     >
                                         {inputPalet && !scannedPaletData ? <Search className="w-6 h-6" /> : <ScanBarcode className="w-6 h-6" />}
                                     </Button>
@@ -777,10 +832,10 @@ export default function MobileScannerPage() {
                                 )}
                             </div>
                         </CardContent>
-                    </Card>
+                    </Card >
 
                     {/* LIST SECTION */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200">
+                    < div className="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200" >
                         <button
                             className="w-full bg-slate-100 p-3 flex justify-between items-center text-sm font-semibold text-slate-700"
                             onClick={() => setShowPendingList(!showPendingList)}
@@ -792,43 +847,45 @@ export default function MobileScannerPage() {
                             {showPendingList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
 
-                        {showPendingList && (
-                            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
-                                {getFilteredPalets().length === 0 ? (
-                                    <div className="p-4 text-center text-sm text-slate-400">
-                                        {workMode === "validation"
-                                            ? "Todos los items han sido validados."
-                                            : "No hay items validados pendientes de ubicación."}
-                                    </div>
-                                ) : (
-                                    getFilteredPalets().map((p) => (
-                                        <div
-                                            key={p.id}
-                                            className="grid grid-cols-3 text-xs p-3 hover:bg-slate-50 cursor-pointer"
-                                            onClick={() => {
-                                                setInputPalet(p.codigo)
-                                                setScannedPaletData(p)
-                                            }}
-                                        >
-                                            <div className="font-semibold text-slate-600 flex items-center">
-                                                {workMode === "validation"
-                                                    ? <span className="text-amber-600">{p.estado}</span>
-                                                    : <span className="text-green-600 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1" /> OK</span>
-                                                }
-                                            </div>
-                                            <div className="truncate text-slate-500">{p.itemCode}</div>
-                                            <div className="text-right font-mono font-medium text-slate-800">{p.cantidad}</div>
+                        {
+                            showPendingList && (
+                                <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                                    {getFilteredPalets().length === 0 ? (
+                                        <div className="p-4 text-center text-sm text-slate-400">
+                                            {workMode === "validation"
+                                                ? "Todos los items han sido validados."
+                                                : "No hay items validados pendientes de ubicación."}
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+                                    ) : (
+                                        getFilteredPalets().map((p) => (
+                                            <div
+                                                key={p.id}
+                                                className="grid grid-cols-3 text-xs p-3 hover:bg-slate-50 cursor-pointer"
+                                                onClick={() => {
+                                                    setInputPalet(p.codigo)
+                                                    setScannedPaletData(p)
+                                                }}
+                                            >
+                                                <div className="font-semibold text-slate-600 flex items-center">
+                                                    {workMode === "validation"
+                                                        ? <span className="text-amber-600">{p.estado}</span>
+                                                        : <span className="text-green-600 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1" /> OK</span>
+                                                    }
+                                                </div>
+                                                <div className="truncate text-slate-500">{p.itemCode}</div>
+                                                <div className="text-right font-mono font-medium text-slate-800">{p.cantidad}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )
+                        }
+                    </div >
+                </div >
+            </div >
 
             {/* Modal de edición de detalle */}
-            <EditDetalleModal
+            < EditDetalleModal
                 open={showEditModal}
                 onClose={handleModalClose}
                 detalle={scannedPaletData}
