@@ -10,6 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScanBarcode, Camera, Keyboard, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+import { useScanDetection } from "@/hooks/use-scan-detection"
+import { toast } from "sonner"
+
 interface ScannerModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -29,7 +32,7 @@ interface ScanResult {
 }
 
 export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModalProps) {
-  const [scanMode, setScanMode] = useState<"camera" | "manual">("manual")
+  const [scanMode, setScanMode] = useState<"camera" | "manual" | "zebra">("manual")
   const [inputValue, setInputValue] = useState("")
   const [lastScan, setLastScan] = useState<ScanResult | null>(null)
   const [isScanning, setIsScanning] = useState(false)
@@ -38,6 +41,21 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
   const [cameraActive, setCameraActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const scannerRef = useRef<any>(null)
+
+  // --- ZEBRA / HARDWARE SCANNING HOOK ---
+  useScanDetection({
+    onComplete: (code) => {
+      // Ignore if modal is closed
+      if (!open) return
+
+      toast.info(`Escaneo Hardware: ${code}`)
+      handleScan(code)
+    },
+    minLength: 3,
+    // We intentionally DON'T ignore inputs here so it works even if focusing the manual input
+    // but maybe we want to be careful if user is typing manually? 
+    // Usually Zebra sends keys very fast, typing is slow. Hook handles that via avgTimeByChar.
+  })
 
   // Auto-focus input when modal opens
   useEffect(() => {
@@ -223,12 +241,25 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
             Escáner de Códigos
           </DialogTitle>
           <DialogDescription>
-            Escanea códigos de barras o QR usando tu cámara o un lector USB.
+            Escanea códigos de barras o QR usando tu cámara, lector USB o Zebra.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={scanMode} onValueChange={(v) => setScanMode(v as "camera" | "manual")}>
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={scanMode} onValueChange={(v) => setScanMode(v as "camera" | "manual" | "zebra")}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="zebra" className="gap-2">
+              {/* Zebra Icon (Barcode) */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <path d="M3 7V5c0-1.1.9-2 2-2h2" />
+                <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
+                <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
+                <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
+                <path d="M7 7h10v10H7z" />
+                <path d="M12 17v-6" />
+              </svg>
+              <span className="hidden sm:inline">Zebra</span>
+              <span className="sm:hidden">Zebra</span>
+            </TabsTrigger>
             <TabsTrigger value="manual" className="gap-2">
               <Keyboard className="w-4 h-4" />
               <span className="hidden sm:inline">Lector USB</span>
@@ -240,6 +271,30 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
               <span className="sm:hidden">Cámara</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="zebra" className="space-y-4 mt-4">
+            <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center border-2 border-dashed border-slate-200 rounded-lg bg-slate-50">
+              <div className="bg-white p-4 rounded-full shadow-sm">
+                <svg viewBox="0 0 24 24" fill="none" class="w-12 h-12 text-blue-500" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M3 7V5c0-1.1.9-2 2-2h2" />
+                  <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
+                  <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
+                  <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
+                  <path d="M7 7h10v10H7z" />
+                  <path d="M12 17v-6" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-slate-900">Modo Zebra Scanner</h3>
+                <p className="text-sm text-slate-500 max-w-[200px]">
+                  Presiona el gatillo físico de tu dispositivo para escanear.
+                </p>
+              </div>
+              <div className="text-xs text-blue-600 font-medium bg-blue-50 px-3 py-1 rounded-full">
+                Detector de Hardware Activo
+              </div>
+            </div>
+          </TabsContent>
 
           <TabsContent value="manual" className="space-y-4 mt-4">
             <div className="space-y-2">
