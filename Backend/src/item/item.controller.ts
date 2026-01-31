@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException } from '@nestjs/common';
 import { ItemService } from './item.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
@@ -17,6 +17,24 @@ export class ItemController {
     return this.itemService.findAll();
   }
 
+  @Get('barcode/:codigoBarra')
+  async findByBarcode(@Param('codigoBarra') codigoBarra: string) {
+    const item = await this.itemService.findByCodigoBarra(codigoBarra);
+    if (!item) {
+      throw new NotFoundException('Item no encontrado por código de barras');
+    }
+    return item;
+  }
+
+  @Get('codigo/:codigo')
+  async findByCodigo(@Param('codigo') codigo: string) {
+    const item = await this.itemService.findByCodigo(codigo);
+    if (!item) {
+      throw new NotFoundException('Item no encontrado por código');
+    }
+    return item;
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.itemService.findOne(+id);
@@ -32,3 +50,4 @@ export class ItemController {
     return this.itemService.remove(+id);
   }
 }
+

@@ -39,4 +39,28 @@ export const ItemService = {
         if (!res.ok) throw new Error("Error al buscar items");
         return await res.json();
     },
+
+    /**
+     * Obtiene un item por código de barras
+     */
+    async getByCodigoBarra(codigoBarra: string): Promise<Item | null> {
+        const res = await fetch(`${API_ENDPOINTS.item}/barcode/${encodeURIComponent(codigoBarra)}`);
+        if (!res.ok) {
+            if (res.status === 404) return null;
+            throw new Error("Error al buscar por código de barras");
+        }
+        return await res.json();
+    },
+
+    /**
+     * Obtiene un item por código
+     */
+    async getByCodigo(codigo: string): Promise<Item | null> {
+        const res = await fetch(`${API_ENDPOINTS.item}/codigo/${encodeURIComponent(codigo)}`);
+        if (!res.ok) {
+            if (res.status === 404) return null;
+            throw new Error("Error al buscar por código");
+        }
+        return await res.json();
+    },
 };

@@ -37,6 +37,20 @@ export class ItemService {
     return await this.itemRepository.findOneBy({ codigo });
   }
 
+  /**
+   * Busca un item por código de barras
+   */
+  async findByCodigoBarra(codigoBarra: string): Promise<Item | null> {
+    return await this.itemRepository.findOneBy({ codigoBarra });
+  }
+
+  /**
+   * Busca un item por código
+   */
+  async findByCodigo(codigo: string): Promise<Item | null> {
+    return await this.itemRepository.findOneBy({ codigo });
+  }
+
   async increaseStock(id: number, amount: number) {
     const item = await this.findOne(id);
     if (!item) return;

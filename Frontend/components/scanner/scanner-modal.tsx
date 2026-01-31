@@ -151,32 +151,60 @@ export function ScannerModal({ open, onOpenChange, onScanSuccess }: ScannerModal
     setCameraActive(false)
   }
 
-  const handleScan = (code: string) => {
+  const handleScan = async (code: string) => {
     if (!code.trim()) return
 
     setIsScanning(true)
 
-    setTimeout(() => {
-      const mockProduct = {
-        name: "Producto Demo " + code.slice(-4),
-        sku: code,
-        location: "A-01-02-03",
-        stock: Math.floor(Math.random() * 100) + 1,
+    try {
+      // Import ItemService dynamically to avoid circular deps
+      const { ItemService } = await import("@/lib/api/item.service")
+
+      // Try to find product by barcode first, then by codigo
+      let product = await ItemService.getByCodigoBarra(code).catch(() => null)
+
+      if (!product) {
+        // Try by codigo
+        product = await ItemService.getByCodigo(code).catch(() => null)
       }
 
+      if (product) {
+        setLastScan({
+          code,
+          type: code.length > 15 ? "qr" : "barcode",
+          timestamp: new Date(),
+          product: {
+            name: product.descripcion,
+            sku: product.codigo,
+            location: "-", // Would need stock_inventario lookup
+            stock: product.stock || 0,
+          },
+        })
+      } else {
+        // Product not found
+        setLastScan({
+          code,
+          type: code.length > 15 ? "qr" : "barcode",
+          timestamp: new Date(),
+          product: undefined,
+        })
+      }
+    } catch (error) {
+      console.error("Error fetching product:", error)
       setLastScan({
         code,
         type: code.length > 15 ? "qr" : "barcode",
         timestamp: new Date(),
-        product: mockProduct,
+        product: undefined,
       })
+    } finally {
       setInputValue("")
       setIsScanning(false)
 
       if (onScanSuccess) {
         onScanSuccess(code)
       }
-    }, 500)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
