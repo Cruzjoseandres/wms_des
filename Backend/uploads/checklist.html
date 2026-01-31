@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoja de Pedido - TEST-MINI-001</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; text-align: center; }
+        .order-card { border: 2px solid #333; padding: 2rem; border-radius: 8px; }
+        .item-list { display: flex; flex-direction: column; gap: 2rem; margin-top: 2rem; }
+        .item { border: 1px solid #ccc; padding: 1rem; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .item-info { text-align: left; }
+        .barcode img { height: 80px; }
+        h1 { color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div class="order-card">
+        <h1>Pedido: TEST-MINI-001</h1>
+        <p><strong>Estado:</strong> PALETIZADO (Listo para validar)</p>
+        <p><strong>Origen:</strong> Prueba Rápida</p>
+        
+        <div class="item-list">
+            <!-- Item 1 -->
+            <div class="item">
+                <div class="item-info">
+                    <h2>Destornillador Phillips</h2>
+                    <p>SKU: PROD-003</p>
+                    <p><strong>Cantidad Esperada: 2</strong></p>
+                </div>
+                <div class="barcode">
+                    <img src="./barcodes/7501234567003.png" alt="7501234567003">
+                    <p>7501234567003</p>
+                </div>
+            </div>
+
+            <!-- Item 2 -->
+            <div class="item">
+                <div class="item-info">
+                    <h2>Galletas Oreo</h2>
+                    <p>SKU: ALIM-006</p>
+                    <p><strong>Cantidad Esperada: 3</strong></p>
+                </div>
+                <div class="barcode">
+                    <img src="./barcodes/7504444333006.png" alt="7504444333006">
+                    <p>7504444333006</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
