@@ -20,6 +20,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { MovilService } from "@/lib/api/movil.service"
 import type { OrdenMovil } from "@/lib/models"
+import { EditDetalleModal } from "@/components/ingresos/edit-detalle-modal"
 
 // --- TYPES ---
 interface DetallePalet {
@@ -92,6 +93,9 @@ export default function MobileScannerPage() {
     const [activeScanField, setActiveScanField] = useState<"doc" | "palet" | "location">("doc")
     const scannerRef = useRef<Html5QrcodeScanner | null>(null)
 
+    // Modal State
+    const [showEditModal, setShowEditModal] = useState(false)
+
     // --- LOAD DATA ---
     const loadOrdenes = async (mode: "validation" | "storage") => {
         setIsLoading(true)
@@ -154,14 +158,15 @@ export default function MobileScannerPage() {
 
         if (found) {
             setScannedPaletData(found)
+            setShowEditModal(true) // Abrir modal de edición
             toast.success("Item encontrado")
 
             if (workMode === "storage" && found.estado !== "Validado") {
                 toast.warning("Este item no ha sido VALIDADO aún.")
             }
         } else {
-            // Si no está en el documento actual, puede ser un código válido para buscar
-            setScannedPaletData({
+            // Si no está en el documento actual, crear uno temporal
+            const tempDetalle: DetallePalet = {
                 id: "temp",
                 codigo: inputPalet,
                 itemCode: inputPalet,
@@ -169,8 +174,10 @@ export default function MobileScannerPage() {
                 cantidad: 0,
                 unidad: "UNID",
                 estado: "Pendiente"
-            })
-            toast.info("Código escaneado - Presione VALIDAR o ALMACENAR")
+            }
+            setScannedPaletData(tempDetalle)
+            setShowEditModal(true) // Abrir modal de edición
+            toast.info("Código escaneado - Complete los datos")
         }
     }
 
@@ -258,6 +265,82 @@ export default function MobileScannerPage() {
         } finally {
             setProcessingAction(false)
         }
+    }
+
+    // --- MODAL HANDLERS ---
+    const handleModalClose = () => {
+        setShowEditModal(false)
+    }
+
+    const handleModalValidar = async (detalle: DetallePalet) => {
+        setProcessingAction(true)
+        try {
+            const result = await MovilService.validar(detalle.codigo, "PDA_USER")
+            toast.success(result.mensaje)
+
+            // Actualizar estado local
+            if (currentDoc) {
+                const updatedPalets = currentDoc.palets.map(p =>
+                    p.id === detalle.id ? { ...p, estado: "Validado" as const } : p
+                )
+                setCurrentDoc({ ...currentDoc, palets: updatedPalets })
+            }
+
+            setScannedPaletData(null)
+            setInputPalet("")
+            await loadOrdenes(workMode)
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Error al validar"
+            toast.error(errorMessage)
+            throw error
+        } finally {
+            setProcessingAction(false)
+        }
+    }
+
+    const handleModalAlmacenar = async (detalle: DetallePalet, ubicacion: string) => {
+        setProcessingAction(true)
+        try {
+            const result = await MovilService.almacenar(detalle.codigo, ubicacion, "PDA_USER")
+            toast.success(result.mensaje)
+
+            // Actualizar estado local
+            if (currentDoc) {
+                const updatedPalets = currentDoc.palets.map(p =>
+                    p.id === detalle.id
+                        ? { ...p, estado: "Almacenado" as const, ubicacion }
+                        : p
+                )
+                setCurrentDoc({ ...currentDoc, palets: updatedPalets })
+            }
+
+            setScannedPaletData(null)
+            setInputPalet("")
+            setInputLocation("")
+            await loadOrdenes(workMode)
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Error al almacenar"
+            toast.error(errorMessage)
+            throw error
+        } finally {
+            setProcessingAction(false)
+        }
+    }
+
+    const handleModalActualizar = (detalle: DetallePalet, cambios: Partial<DetallePalet>) => {
+        if (!currentDoc) return
+
+        const updatedPalets = currentDoc.palets.map(p =>
+            p.id === detalle.id ? { ...p, ...cambios } : p
+        )
+        setCurrentDoc({ ...currentDoc, palets: updatedPalets })
+
+        // Actualizar también el detalle escaneado
+        if (scannedPaletData && scannedPaletData.id === detalle.id) {
+            setScannedPaletData({ ...scannedPaletData, ...cambios })
+        }
+
+        toast.success("Cambios guardados localmente")
     }
 
     // --- SCANNER LOGIC ---
@@ -449,198 +532,211 @@ export default function MobileScannerPage() {
 
     // --- WORK VIEW ---
     return (
-        <div className="min-h-screen bg-slate-100 flex flex-col">
-            {/* HEADER */}
-            <div className="bg-slate-900 text-white px-4 py-3 shadow-md sticky top-0 z-10">
-                <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2" onClick={() => setStep("search")}>
-                        <ArrowLeft className="w-5 h-5 text-slate-400 cursor-pointer" />
-                        <h2 className="font-bold text-lg tracking-wide">
-                            {workMode === "validation" ? "VALIDACIÓN" : "ALM. EN UBICACIONES"}
-                        </h2>
+        <>
+            <div className="min-h-screen bg-slate-100 flex flex-col">
+                {/* HEADER */}
+                <div className="bg-slate-900 text-white px-4 py-3 shadow-md sticky top-0 z-10">
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2" onClick={() => setStep("search")}>
+                            <ArrowLeft className="w-5 h-5 text-slate-400 cursor-pointer" />
+                            <h2 className="font-bold text-lg tracking-wide">
+                                {workMode === "validation" ? "VALIDACIÓN" : "ALM. EN UBICACIONES"}
+                            </h2>
+                        </div>
+                        <div className="flex gap-1">
+                            <Button
+                                size="sm"
+                                variant={workMode === "validation" ? "default" : "secondary"}
+                                className={cn("h-7 text-xs", workMode === "validation" ? "bg-orange-600" : "bg-slate-700")}
+                                onClick={() => { setWorkMode("validation"); setScannedPaletData(null); }}
+                            >
+                                Validar
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={workMode === "storage" ? "default" : "secondary"}
+                                className={cn("h-7 text-xs", workMode === "storage" ? "bg-orange-600" : "bg-slate-700")}
+                                onClick={() => { setWorkMode("storage"); setScannedPaletData(null); }}
+                            >
+                                Almacen
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex gap-1">
-                        <Button
-                            size="sm"
-                            variant={workMode === "validation" ? "default" : "secondary"}
-                            className={cn("h-7 text-xs", workMode === "validation" ? "bg-orange-600" : "bg-slate-700")}
-                            onClick={() => { setWorkMode("validation"); setScannedPaletData(null); }}
-                        >
-                            Validar
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={workMode === "storage" ? "default" : "secondary"}
-                            className={cn("h-7 text-xs", workMode === "storage" ? "bg-orange-600" : "bg-slate-700")}
-                            onClick={() => { setWorkMode("storage"); setScannedPaletData(null); }}
-                        >
-                            Almacen
-                        </Button>
+
+                    {/* Doc Info */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-300 border-t border-slate-700 pt-2">
+                        <div>
+                            <span className="text-slate-500 block">Nro. Doc:</span>
+                            <span className="text-white font-mono">{currentDoc?.nroDocumento}</span>
+                        </div>
+                        <div>
+                            <span className="text-slate-500 block">Estado:</span>
+                            <span className="text-orange-400">{currentDoc?.estadoGlobal}</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Doc Info */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-300 border-t border-slate-700 pt-2">
-                    <div>
-                        <span className="text-slate-500 block">Nro. Doc:</span>
-                        <span className="text-white font-mono">{currentDoc?.nroDocumento}</span>
-                    </div>
-                    <div>
-                        <span className="text-slate-500 block">Estado:</span>
-                        <span className="text-orange-400">{currentDoc?.estadoGlobal}</span>
-                    </div>
-                </div>
-            </div>
+                <div className="flex-1 p-3 space-y-4 max-w-md mx-auto w-full">
+                    {/* INPUT SECTIONS */}
+                    <Card className="shadow-md border-0 bg-white">
+                        <CardContent className="p-4 space-y-4">
+                            {/* Location Input (Storage Mode) */}
+                            {workMode === "storage" && (
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                                        Lectura código ubicación
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                                            <Input
+                                                className="pl-10 h-12 text-lg border-orange-200 focus-visible:ring-orange-500"
+                                                placeholder="Ej: A-01-01-01"
+                                                value={inputLocation}
+                                                onChange={(e) => setInputLocation(e.target.value)}
+                                            />
+                                        </div>
+                                        <Button
+                                            className="h-12 w-12 bg-orange-500 hover:bg-orange-600 shrink-0"
+                                            onClick={() => startScanner("location")}
+                                        >
+                                            <ScanBarcode className="w-6 h-6" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
 
-            <div className="flex-1 p-3 space-y-4 max-w-md mx-auto w-full">
-                {/* INPUT SECTIONS */}
-                <Card className="shadow-md border-0 bg-white">
-                    <CardContent className="p-4 space-y-4">
-                        {/* Location Input (Storage Mode) */}
-                        {workMode === "storage" && (
+                            {/* Pallet/Item Input */}
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-slate-500 uppercase">
-                                    Lectura código ubicación
+                                    {workMode === "validation" ? "Código de producto a validar" : "Código de producto"}
                                 </label>
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
-                                        <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                                        <Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                                         <Input
-                                            className="pl-10 h-12 text-lg border-orange-200 focus-visible:ring-orange-500"
-                                            placeholder="Ej: A-01-01-01"
-                                            value={inputLocation}
-                                            onChange={(e) => setInputLocation(e.target.value)}
+                                            className="pl-10 h-12 text-lg border-blue-200 focus-visible:ring-blue-500 font-mono"
+                                            placeholder="Escanear o escribir código..."
+                                            value={inputPalet}
+                                            onChange={(e) => setInputPalet(e.target.value)}
                                         />
                                     </div>
                                     <Button
-                                        className="h-12 w-12 bg-orange-500 hover:bg-orange-600 shrink-0"
-                                        onClick={() => startScanner("location")}
+                                        className={cn("h-12 w-12 shrink-0", inputPalet ? "bg-blue-600" : "bg-orange-500")}
+                                        onClick={inputPalet && !scannedPaletData ? handleScanPalet : () => startScanner("palet")}
                                     >
-                                        <ScanBarcode className="w-6 h-6" />
+                                        {inputPalet && !scannedPaletData ? <Search className="w-6 h-6" /> : <ScanBarcode className="w-6 h-6" />}
                                     </Button>
                                 </div>
+                            </div>
+
+                            {/* Scanned Item Details */}
+                            <div className="grid grid-cols-3 gap-2 py-2 bg-slate-50 rounded-lg p-2 border border-slate-100">
+                                <div>
+                                    <div className="text-[10px] text-slate-400 uppercase">Item</div>
+                                    <div className="font-bold text-sm truncate">{scannedPaletData?.itemCode || "-"}</div>
+                                </div>
+                                <div className="border-l border-slate-200 pl-2">
+                                    <div className="text-[10px] text-slate-400 uppercase">Cant.</div>
+                                    <div className="font-bold text-sm text-blue-600">{scannedPaletData?.cantidad || "-"}</div>
+                                </div>
+                                <div className="border-l border-slate-200 pl-2">
+                                    <div className="text-[10px] text-slate-400 uppercase">Lote</div>
+                                    <div className="font-bold text-sm">{scannedPaletData?.lote || "-"}</div>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                {workMode === "validation" ? (
+                                    <>
+                                        <Button
+                                            variant="destructive"
+                                            className="h-12 font-bold bg-red-600 hover:bg-red-700 shadow-sm"
+                                            disabled={!inputPalet || processingAction}
+                                            onClick={handleReport}
+                                        >
+                                            REPORTAR
+                                        </Button>
+                                        <Button
+                                            className="h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
+                                            disabled={!inputPalet || processingAction}
+                                            onClick={handleValidate}
+                                        >
+                                            {processingAction ? <Loader2 className="animate-spin" /> : "VALIDAR"}
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button
+                                        className="col-span-2 h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
+                                        disabled={!inputPalet || !inputLocation || processingAction}
+                                        onClick={handleStore}
+                                    >
+                                        {processingAction ? <Loader2 className="animate-spin" /> : "ALMACENAR"}
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* LIST SECTION */}
+                    <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200">
+                        <button
+                            className="w-full bg-slate-100 p-3 flex justify-between items-center text-sm font-semibold text-slate-700"
+                            onClick={() => setShowPendingList(!showPendingList)}
+                        >
+                            <span>
+                                {workMode === "validation" ? "Items Pendientes" : "Items por Almacenar"}
+                                <Badge variant="secondary" className="ml-2 bg-white">{getFilteredPalets().length}</Badge>
+                            </span>
+                            {showPendingList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+
+                        {showPendingList && (
+                            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                                {getFilteredPalets().length === 0 ? (
+                                    <div className="p-4 text-center text-sm text-slate-400">
+                                        {workMode === "validation"
+                                            ? "Todos los items han sido validados."
+                                            : "No hay items validados pendientes de ubicación."}
+                                    </div>
+                                ) : (
+                                    getFilteredPalets().map((p) => (
+                                        <div
+                                            key={p.id}
+                                            className="grid grid-cols-3 text-xs p-3 hover:bg-slate-50 cursor-pointer"
+                                            onClick={() => {
+                                                setInputPalet(p.codigo)
+                                                setScannedPaletData(p)
+                                            }}
+                                        >
+                                            <div className="font-semibold text-slate-600 flex items-center">
+                                                {workMode === "validation"
+                                                    ? <span className="text-amber-600">{p.estado}</span>
+                                                    : <span className="text-green-600 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1" /> OK</span>
+                                                }
+                                            </div>
+                                            <div className="truncate text-slate-500">{p.itemCode}</div>
+                                            <div className="text-right font-mono font-medium text-slate-800">{p.cantidad}</div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         )}
-
-                        {/* Pallet/Item Input */}
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-500 uppercase">
-                                {workMode === "validation" ? "Código de producto a validar" : "Código de producto"}
-                            </label>
-                            <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                    <Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                                    <Input
-                                        className="pl-10 h-12 text-lg border-blue-200 focus-visible:ring-blue-500 font-mono"
-                                        placeholder="Escanear o escribir código..."
-                                        value={inputPalet}
-                                        onChange={(e) => setInputPalet(e.target.value)}
-                                    />
-                                </div>
-                                <Button
-                                    className={cn("h-12 w-12 shrink-0", inputPalet ? "bg-blue-600" : "bg-orange-500")}
-                                    onClick={inputPalet && !scannedPaletData ? handleScanPalet : () => startScanner("palet")}
-                                >
-                                    {inputPalet && !scannedPaletData ? <Search className="w-6 h-6" /> : <ScanBarcode className="w-6 h-6" />}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Scanned Item Details */}
-                        <div className="grid grid-cols-3 gap-2 py-2 bg-slate-50 rounded-lg p-2 border border-slate-100">
-                            <div>
-                                <div className="text-[10px] text-slate-400 uppercase">Item</div>
-                                <div className="font-bold text-sm truncate">{scannedPaletData?.itemCode || "-"}</div>
-                            </div>
-                            <div className="border-l border-slate-200 pl-2">
-                                <div className="text-[10px] text-slate-400 uppercase">Cant.</div>
-                                <div className="font-bold text-sm text-blue-600">{scannedPaletData?.cantidad || "-"}</div>
-                            </div>
-                            <div className="border-l border-slate-200 pl-2">
-                                <div className="text-[10px] text-slate-400 uppercase">Lote</div>
-                                <div className="font-bold text-sm">{scannedPaletData?.lote || "-"}</div>
-                            </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-3 pt-2">
-                            {workMode === "validation" ? (
-                                <>
-                                    <Button
-                                        variant="destructive"
-                                        className="h-12 font-bold bg-red-600 hover:bg-red-700 shadow-sm"
-                                        disabled={!inputPalet || processingAction}
-                                        onClick={handleReport}
-                                    >
-                                        REPORTAR
-                                    </Button>
-                                    <Button
-                                        className="h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
-                                        disabled={!inputPalet || processingAction}
-                                        onClick={handleValidate}
-                                    >
-                                        {processingAction ? <Loader2 className="animate-spin" /> : "VALIDAR"}
-                                    </Button>
-                                </>
-                            ) : (
-                                <Button
-                                    className="col-span-2 h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
-                                    disabled={!inputPalet || !inputLocation || processingAction}
-                                    onClick={handleStore}
-                                >
-                                    {processingAction ? <Loader2 className="animate-spin" /> : "ALMACENAR"}
-                                </Button>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* LIST SECTION */}
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200">
-                    <button
-                        className="w-full bg-slate-100 p-3 flex justify-between items-center text-sm font-semibold text-slate-700"
-                        onClick={() => setShowPendingList(!showPendingList)}
-                    >
-                        <span>
-                            {workMode === "validation" ? "Items Pendientes" : "Items por Almacenar"}
-                            <Badge variant="secondary" className="ml-2 bg-white">{getFilteredPalets().length}</Badge>
-                        </span>
-                        {showPendingList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-
-                    {showPendingList && (
-                        <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
-                            {getFilteredPalets().length === 0 ? (
-                                <div className="p-4 text-center text-sm text-slate-400">
-                                    {workMode === "validation"
-                                        ? "Todos los items han sido validados."
-                                        : "No hay items validados pendientes de ubicación."}
-                                </div>
-                            ) : (
-                                getFilteredPalets().map((p) => (
-                                    <div
-                                        key={p.id}
-                                        className="grid grid-cols-3 text-xs p-3 hover:bg-slate-50 cursor-pointer"
-                                        onClick={() => {
-                                            setInputPalet(p.codigo)
-                                            setScannedPaletData(p)
-                                        }}
-                                    >
-                                        <div className="font-semibold text-slate-600 flex items-center">
-                                            {workMode === "validation"
-                                                ? <span className="text-amber-600">{p.estado}</span>
-                                                : <span className="text-green-600 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1" /> OK</span>
-                                            }
-                                        </div>
-                                        <div className="truncate text-slate-500">{p.itemCode}</div>
-                                        <div className="text-right font-mono font-medium text-slate-800">{p.cantidad}</div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {/* Modal de edición de detalle */}
+            <EditDetalleModal
+                open={showEditModal}
+                onClose={handleModalClose}
+                detalle={scannedPaletData}
+                modo={workMode}
+                onValidar={handleModalValidar}
+                onAlmacenar={handleModalAlmacenar}
+                onActualizar={handleModalActualizar}
+            />
+        </>
     )
 }

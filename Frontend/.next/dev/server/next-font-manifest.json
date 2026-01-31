@@ -1,11 +1,5 @@
 {
   "app": {
-    "[project]/app/administracion/productos/page": [
-      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
-    ],
-    "[project]/app/almacen/kardex/page": [
-      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
-    ],
     "[project]/app/almacen/stock/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ],
@@ -18,13 +12,7 @@
     "[project]/app/ingresos/registro/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ],
-    "[project]/app/ingresos/ubicacion/page": [
-      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
-    ],
     "[project]/app/inventario/gestion/page": [
-      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
-    ],
-    "[project]/app/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ]
   },
