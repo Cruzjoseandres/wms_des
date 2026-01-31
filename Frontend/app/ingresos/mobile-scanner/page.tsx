@@ -369,10 +369,18 @@ export default function MobileScannerPage() {
     const handleScanPaletWithCode = (code: string) => {
         if (!currentDoc) return
 
+        console.log("[SCAN] Code received:", code)
+        console.log("[SCAN] Available palets:", currentDoc.palets.map(p => ({
+            codigo: p.codigo,
+            itemCode: p.itemCode
+        })))
+
         const found = currentDoc.palets.find(p =>
             p.codigo === code ||
             p.itemCode === code
         )
+
+        console.log("[SCAN] Found:", found ? found.itemCode : "NOT FOUND")
 
         if (found) {
             // Increment scan count for this item
@@ -380,6 +388,8 @@ export default function MobileScannerPage() {
             const currentCount = scanCounts[itemKey] || 0
             const expectedQty = getExpectedQty(itemKey) || Number(found.cantidad) || 1
             const newCount = currentCount + 1
+
+            console.log("[SCAN] Incrementing count:", { itemKey, currentCount, newCount, expectedQty })
 
             setScanCounts(prev => ({ ...prev, [itemKey]: newCount }))
             setScannedPaletData(found)
@@ -393,6 +403,7 @@ export default function MobileScannerPage() {
             }
         } else {
             // Unknown code - open modal for more info
+            console.log("[SCAN] Code not found, opening modal")
             const tempDetalle: DetallePalet = {
                 id: "temp",
                 codigo: code,
