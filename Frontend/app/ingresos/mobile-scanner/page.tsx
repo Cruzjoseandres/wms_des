@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils"
 import { MovilService } from "@/lib/api/movil.service"
 import type { OrdenMovil } from "@/lib/models"
 import { EditDetalleModal } from "@/components/ingresos/edit-detalle-modal"
+import { useScanDetection } from "@/hooks/use-scan-detection"
 
 // --- TYPES ---
 interface DetallePalet {
@@ -343,7 +344,97 @@ export default function MobileScannerPage() {
         toast.success("Cambios guardados localmente")
     }
 
-    // --- SCANNER LOGIC ---
+    // --- SCANNER LOGIC (ZEBRA / HARDWARE) ---
+    const handleGlobalScan = (code: string) => {
+        // console.log("Global Scan Detected:", code)
+        toast.info(`Escaneado: ${code}`)
+
+        if (step === "search") {
+            setDocQuery(code)
+            handleSearchDoc(code)
+            return
+        }
+
+        if (step === "work") {
+            // Heuristic: If we are in storage mode and code matches location format (e.g. A-01-...)
+            const isLocation = /^[A-Z]-\d{2}-\d{2}/.test(code)
+
+            if (workMode === "storage" && isLocation) {
+                setInputLocation(code)
+                // Optional: Auto-focus next field or trigger action if pallet is already set
+                toast.success(`Ubicación establecida: ${code}`)
+                return
+            }
+
+            // Otherwise assume it's a product/pallet
+            setInputPalet(code)
+            // We need to trigger the logic, but state updates are async. 
+            // We can call a modified version of handleScanPalet that accepts the code directly
+            handleScanPaletWithCode(code)
+        }
+    }
+
+    useScanDetection({
+        onComplete: handleGlobalScan,
+        minLength: 3,
+        ignoreIfFocusOn: ["input", "textarea"] // Let inputs handle scans when focused
+    })
+
+    // Helper for direct scanning
+    const handleScanPaletWithCode = (code: string) => {
+        if (!currentDoc) return
+
+        const found = currentDoc.palets.find(p =>
+            p.codigo === code ||
+            p.itemCode === code
+        )
+
+        // Same logic as handleScanPalet but with direct code
+        if (found) {
+            setScannedPaletData(found)
+            setShowEditModal(true)
+            toast.success("Item encontrado")
+
+            if (workMode === "storage" && found.estado !== "Validado") {
+                toast.warning("Este item no ha sido VALIDADO aún.")
+            }
+        } else {
+            const tempDetalle: DetallePalet = {
+                id: "temp",
+                codigo: code,
+                itemCode: code,
+                descripcion: "Código escaneado",
+                cantidad: 0,
+                unidad: "UNID",
+                estado: "Pendiente"
+            }
+            setScannedPaletData(tempDetalle)
+            setShowEditModal(true)
+            toast.info("Código escaneado - Complete los datos")
+        }
+    }
+
+    // Helper for Input KeyDown (Enter) -> Manual Entry or Focused Scan
+    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, field: "doc" | "palet" | "location") => {
+        if (e.key === "Enter") {
+            const val = e.currentTarget.value
+            if (!val) return
+
+            if (field === "doc") {
+                handleSearchDoc(val)
+            } else if (field === "palet") {
+                handleScanPaletWithCode(val)
+            } else if (field === "location") {
+                // Just move focus or confirm
+                // If we have both, maybe trigger store?
+                if (inputPalet) {
+                    // handleStore() // Optional auto-submit
+                }
+            }
+        }
+    }
+
+    // --- CAMERA SCANNER LOGIC ---
     useEffect(() => {
         if (!isScanning) {
             if (scannerRef.current) {
@@ -371,17 +462,22 @@ export default function MobileScannerPage() {
 
                 scanner.render(
                     (decodedText) => {
-                        if (activeScanField === "doc") setDocQuery(decodedText)
-                        if (activeScanField === "palet") setInputPalet(decodedText)
-                        if (activeScanField === "location") setInputLocation(decodedText)
+                        // ... (existing camera logic)
+                        if (activeScanField === "doc") {
+                            setDocQuery(decodedText)
+                            handleSearchDoc(decodedText)
+                        }
+                        if (activeScanField === "palet") {
+                            setInputPalet(decodedText)
+                            handleScanPaletWithCode(decodedText)
+                        }
+                        if (activeScanField === "location") {
+                            setInputLocation(decodedText)
+                        }
 
                         scanner.clear().catch(console.error)
                         scannerRef.current = null
                         setIsScanning(false)
-
-                        if (activeScanField === "doc") {
-                            handleSearchDoc(decodedText)
-                        }
                     },
                     (error) => { /* scanning */ }
                 )
@@ -506,6 +602,7 @@ export default function MobileScannerPage() {
                                 <Input
                                     value={docQuery}
                                     onChange={(e) => setDocQuery(e.target.value)}
+                                    onKeyDown={(e) => handleInputKeyDown(e, "doc")}
                                     placeholder="Nro documento..."
                                     className="h-12 text-lg"
                                 />
@@ -594,6 +691,7 @@ export default function MobileScannerPage() {
                                                 placeholder="Ej: A-01-01-01"
                                                 value={inputLocation}
                                                 onChange={(e) => setInputLocation(e.target.value)}
+                                                onKeyDown={(e) => handleInputKeyDown(e, "location")}
                                             />
                                         </div>
                                         <Button
@@ -619,8 +717,10 @@ export default function MobileScannerPage() {
                                             placeholder="Escanear o escribir código..."
                                             value={inputPalet}
                                             onChange={(e) => setInputPalet(e.target.value)}
+                                            onKeyDown={(e) => handleInputKeyDown(e, "palet")}
                                         />
                                     </div>
+
                                     <Button
                                         className={cn("h-12 w-12 shrink-0", inputPalet ? "bg-blue-600" : "bg-orange-500")}
                                         onClick={inputPalet && !scannedPaletData ? handleScanPalet : () => startScanner("palet")}
