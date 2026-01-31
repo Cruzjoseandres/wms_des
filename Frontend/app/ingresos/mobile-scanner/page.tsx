@@ -321,42 +321,6 @@ export default function MobileScannerPage() {
         toast.success("Cambios guardados localmente")
     }
 
-    // --- SCANNER LOGIC (ZEBRA / HARDWARE) ---
-    const handleGlobalScan = (code: string) => {
-        // console.log("Global Scan Detected:", code)
-        toast.info(`Escaneado: ${code}`)
-
-        if (step === "search") {
-            setDocQuery(code)
-            handleSearchDoc(code)
-            return
-        }
-
-        if (step === "work") {
-            // Heuristic: If we are in storage mode and code matches location format (e.g. A-01-...)
-            const isLocation = /^[A-Z]-\d{2}-\d{2}/.test(code)
-
-            if (workMode === "storage" && isLocation) {
-                setInputLocation(code)
-                // Optional: Auto-focus next field or trigger action if pallet is already set
-                toast.success(`Ubicación establecida: ${code}`)
-                return
-            }
-
-            // Otherwise assume it's a product/pallet
-            setInputPalet(code)
-            // We need to trigger the logic, but state updates are async. 
-            // We can call a modified version of handleScanPalet that accepts the code directly
-            handleScanPaletWithCode(code)
-        }
-    }
-
-    useScanDetection({
-        onComplete: handleGlobalScan,
-        minLength: 3,
-        ignoreIfFocusOn: ["input", "textarea"] // Let inputs handle scans when focused
-    })
-
     // Helper to get expected quantity for an item
     const getExpectedQty = (itemCode: string): number => {
         const orden = ordenes.find(o => o.id.toString() === currentDoc?.id)
@@ -418,6 +382,43 @@ export default function MobileScannerPage() {
             toast.warning("Código no está en esta orden")
         }
     }
+
+    // --- SCANNER LOGIC (ZEBRA / HARDWARE) ---
+    const handleGlobalScan = (code: string) => {
+        // console.log("Global Scan Detected:", code)
+        toast.info(`Escaneado: ${code}`)
+
+        if (step === "search") {
+            setDocQuery(code)
+            handleSearchDoc(code)
+            return
+        }
+
+        if (step === "work") {
+            // Heuristic: If we are in storage mode and code matches location format (e.g. A-01-...)
+            const isLocation = /^[A-Z]-\d{2}-\d{2}/.test(code)
+
+            if (workMode === "storage" && isLocation) {
+                setInputLocation(code)
+                // Optional: Auto-focus next field or trigger action if pallet is already set
+                toast.success(`Ubicación establecida: ${code}`)
+                return
+            }
+
+            // Otherwise assume it's a product/pallet
+            setInputPalet(code)
+            // We need to trigger the logic, but state updates are async. 
+            // We can call a modified version of handleScanPalet that accepts the code directly
+            handleScanPaletWithCode(code)
+        }
+    }
+
+    useScanDetection({
+        onComplete: handleGlobalScan,
+        minLength: 3,
+        ignoreIfFocusOn: ["input", "textarea"] // Let inputs handle scans when focused
+    })
+
 
     // Helper for Input KeyDown (Enter) -> Manual Entry or Focused Scan
     const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, field: "doc" | "palet" | "location") => {
