@@ -154,37 +154,9 @@ export default function MobileScannerPage() {
     }
 
     const handleScanPalet = () => {
-        if (!currentDoc) return
-
-        // Buscar palet por código en el documento actual
-        const found = currentDoc.palets.find(p =>
-            p.codigo === inputPalet ||
-            p.itemCode === inputPalet
-        )
-
-        if (found) {
-            setScannedPaletData(found)
-            setShowEditModal(true) // Abrir modal de edición
-            toast.success("Item encontrado")
-
-            if (workMode === "storage" && found.estado !== "Validado") {
-                toast.warning("Este item no ha sido VALIDADO aún.")
-            }
-        } else {
-            // Si no está en el documento actual, crear uno temporal
-            const tempDetalle: DetallePalet = {
-                id: "temp",
-                codigo: inputPalet,
-                itemCode: inputPalet,
-                descripcion: "Código escaneado",
-                cantidad: 0,
-                unidad: "UNID",
-                estado: "Pendiente"
-            }
-            setScannedPaletData(tempDetalle)
-            setShowEditModal(true) // Abrir modal de edición
-            toast.info("Código escaneado - Complete los datos")
-        }
+        if (!currentDoc || !inputPalet) return
+        // Delegate to the counting logic
+        handleScanPaletWithCode(inputPalet)
     }
 
     const handleValidate = async () => {
