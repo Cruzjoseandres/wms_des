@@ -159,38 +159,14 @@ export default function MobileScannerPage() {
         handleScanPaletWithCode(inputPalet)
     }
 
-    const handleValidate = async () => {
-        if (!inputPalet && !scannedPaletData) {
+    const handleValidate = () => {
+        // NEW: Just increment count instead of calling API
+        const code = inputPalet || scannedPaletData?.codigo
+        if (!code) {
             toast.error("Escanee un código primero")
             return
         }
-
-        const codigoAValidar = inputPalet || scannedPaletData?.codigo
-        if (!codigoAValidar) return
-
-        setProcessingAction(true)
-        try {
-            const result = await MovilService.validar(codigoAValidar, "PDA_USER")
-            toast.success(result.mensaje)
-
-            // Actualizar estado local
-            if (currentDoc && scannedPaletData) {
-                const updatedPalets = currentDoc.palets.map(p =>
-                    p.id === scannedPaletData.id ? { ...p, estado: "Validado" as const } : p
-                )
-                setCurrentDoc({ ...currentDoc, palets: updatedPalets })
-            }
-
-            setScannedPaletData(null)
-            setInputPalet("")
-
-            // Recargar órdenes
-            await loadOrdenes(workMode)
-        } catch (error: any) {
-            toast.error(error.message || "Error al validar")
-        } finally {
-            setProcessingAction(false)
-        }
+        handleScanPaletWithCode(code)
     }
 
     const handleReport = () => {
@@ -824,7 +800,7 @@ export default function MobileScannerPage() {
                                             disabled={!inputPalet || processingAction}
                                             onClick={handleValidate}
                                         >
-                                            {processingAction ? <Loader2 className="animate-spin" /> : "VALIDAR"}
+                                            {processingAction ? <Loader2 className="animate-spin" /> : "CONTAR"}
                                         </Button>
                                     </>
                                 ) : (
