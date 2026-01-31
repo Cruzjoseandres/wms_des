@@ -12,6 +12,13 @@ class EscanearAlmacenarDto {
     usuarioId?: string;
 }
 
+class ConfirmarIngresoDto {
+    notaIngresoId: number;
+    detalles: { detalleId: number; cantidadRecibida: number; ubicacion?: string }[];
+    observacion?: string;
+    usuarioId?: string;
+}
+
 @Controller('api/movil')
 export class MovilController {
     constructor(private readonly movilService: MovilService) { }
@@ -40,6 +47,20 @@ export class MovilController {
         return await this.movilService.escanearAlmacenar(
             dto.codigoBarra,
             dto.ubicacionDestino,
+            dto.usuarioId || 'USUARIO_MOVIL',
+        );
+    }
+
+    /**
+     * POST /api/movil/confirmar
+     * Confirma ingreso con cantidades reales y actualiza stock
+     */
+    @Post('confirmar')
+    async confirmarIngreso(@Body() dto: ConfirmarIngresoDto) {
+        return await this.movilService.confirmarIngreso(
+            dto.notaIngresoId,
+            dto.detalles,
+            dto.observacion || null,
             dto.usuarioId || 'USUARIO_MOVIL',
         );
     }

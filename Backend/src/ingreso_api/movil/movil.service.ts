@@ -185,4 +185,84 @@ export class MovilService {
         };
         return nombres[estado] || 'DESCONOCIDO';
     }
+
+    /**
+     * Confirma un ingreso con las cantidades reales recibidas
+     * Actualiza cantidades, cambia estado a ALMACENADO y registra stock
+     */
+    async confirmarIngreso(
+        notaIngresoId: number,
+        detalles: { detalleId: number; cantidadRecibida: number; ubicacion?: string }[],
+        observacion: string | null,
+        usuarioId: string
+    ) {
+        // 1. Obtener la nota de ingreso
+        const nota = await this.notaRepo.findOne({
+            where: { id: notaIngresoId },
+            relations: ['detalles', 'detalles.item'],
+        });
+
+        if (!nota) {
+            throw new NotFoundException(`Nota de ingreso ${notaIngresoId} no encontrada`);
+        }
+
+        // 2. Validar que esté en estado correcto (PALETIZADO o VALIDADO)
+        if (nota.estado !== EstadoIngreso.PALETIZADO && nota.estado !== EstadoIngreso.VALIDADO) {
+            throw new BadRequestException(
+                `La orden ya fue procesada. Estado: ${this.obtenerNombreEstado(nota.estado)}`
+            );
+        }
+
+        const estadoAnterior = nota.estado;
+
+        // 3. Actualizar cada detalle con la cantidad recibida
+        for (const { detalleId, cantidadRecibida, ubicacion } of detalles) {
+            const detalle = nota.detalles.find(d => d.id === detalleId);
+            if (detalle) {
+                detalle.cantidad = cantidadRecibida;
+                if (ubicacion) {
+                    detalle.ubicacionFinal = ubicacion;
+                }
+                await this.detalleRepo.save(detalle);
+
+                // 4. Registrar en stock_inventario
+                if (cantidadRecibida > 0 && detalle.item) {
+                    await this.stockInventarioService.agregarStock({
+                        item: detalle.item,
+                        ubicacion: ubicacion || 'SIN-UBICACION',
+                        cantidad: cantidadRecibida,
+                        detalleIngreso: detalle,
+                    });
+                }
+            }
+        }
+
+        // 5. Actualizar nota de ingreso
+        nota.estado = EstadoIngreso.ALMACENADO;
+        nota.usuarioAlmacenaje = usuarioId;
+        nota.storedAt = new Date();
+        if (observacion) {
+            nota.observacion = observacion;
+        }
+        await this.notaRepo.save(nota);
+
+        // 6. Registrar historial
+        await this.historialEstadoService.registrarCambio({
+            notaIngresoId: nota.id,
+            estadoAnterior,
+            estadoNuevo: EstadoIngreso.ALMACENADO,
+            usuario: usuarioId,
+            motivo: observacion || 'Confirmación de ingreso desde móvil',
+        });
+
+        return {
+            exito: true,
+            mensaje: `Ingreso ${nota.nroDocumento} confirmado. Stock actualizado.`,
+            orden: {
+                id: nota.id,
+                nroDocumento: nota.nroDocumento,
+                estado: 'ALMACENADO',
+            },
+        };
+    }
 }

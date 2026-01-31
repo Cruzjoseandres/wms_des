@@ -81,4 +81,33 @@ export const MovilService = {
         if (!res.ok) throw new Error("Error al obtener órdenes por almacenar");
         return await res.json();
     },
+
+    /**
+     * Confirma ingreso con cantidades reales recibidas
+     * Actualiza stock y cambia estado a ALMACENADO
+     */
+    async confirmarIngreso(
+        notaIngresoId: number,
+        detalles: { detalleId: number; cantidadRecibida: number; ubicacion?: string }[],
+        observacion?: string,
+        usuarioId?: string
+    ): Promise<{ exito: boolean; mensaje: string }> {
+        const res = await fetch(`${API_ENDPOINTS.movil}/confirmar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                notaIngresoId,
+                detalles,
+                observacion,
+                usuarioId: usuarioId || "MOBILE_USER",
+            }),
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Error al confirmar ingreso");
+        }
+
+        return await res.json();
+    },
 };

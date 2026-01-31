@@ -8,6 +8,7 @@ export interface DetalleMovil {
     id: number;
     codItem: string;
     cantidad: number;
+    cantidadEsperada: number;
     lote: string | null;
     item: ItemResumen;
 }

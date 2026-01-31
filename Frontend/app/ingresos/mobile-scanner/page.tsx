@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils"
 import { MovilService } from "@/lib/api/movil.service"
 import type { OrdenMovil } from "@/lib/models"
 import { EditDetalleModal } from "@/components/ingresos/edit-detalle-modal"
+import { ConfirmIngresoModal } from "@/components/ingresos/confirm-ingreso-modal"
 import { useScanDetection } from "@/hooks/use-scan-detection"
 
 // --- TYPES ---
@@ -96,6 +97,10 @@ export default function MobileScannerPage() {
 
     // Modal State
     const [showEditModal, setShowEditModal] = useState(false)
+    const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+    // Scan Counting State
+    const [scanCounts, setScanCounts] = useState<Record<string, number>>({})
 
     // --- LOAD DATA ---
     const loadOrdenes = async (mode: "validation" | "storage") => {
@@ -380,7 +385,15 @@ export default function MobileScannerPage() {
         ignoreIfFocusOn: ["input", "textarea"] // Let inputs handle scans when focused
     })
 
-    // Helper for direct scanning
+    // Helper to get expected quantity for an item
+    const getExpectedQty = (itemCode: string): number => {
+        const orden = ordenes.find(o => o.id.toString() === currentDoc?.id)
+        if (!orden) return 0
+        const detalle = orden.detalles.find(d => d.item.codigo === itemCode || d.item.codigoBarra === itemCode)
+        return detalle?.cantidadEsperada || 0
+    }
+
+    // Helper for direct scanning - NOW COUNTS INSTEAD OF OPENING MODAL
     const handleScanPaletWithCode = (code: string) => {
         if (!currentDoc) return
 
@@ -389,28 +402,37 @@ export default function MobileScannerPage() {
             p.itemCode === code
         )
 
-        // Same logic as handleScanPalet but with direct code
         if (found) {
-            setScannedPaletData(found)
-            setShowEditModal(true)
-            toast.success("Item encontrado")
+            // Increment scan count for this item
+            const itemKey = found.itemCode
+            const currentCount = scanCounts[itemKey] || 0
+            const expectedQty = getExpectedQty(itemKey) || Number(found.cantidad) || 1
+            const newCount = currentCount + 1
 
-            if (workMode === "storage" && found.estado !== "Validado") {
-                toast.warning("Este item no ha sido VALIDADO aún.")
+            setScanCounts(prev => ({ ...prev, [itemKey]: newCount }))
+            setScannedPaletData(found)
+            setInputPalet(code)
+
+            // Show progress toast
+            if (newCount >= expectedQty) {
+                toast.success(`✓ ${found.descripcion}: ${newCount}/${expectedQty} COMPLETO`)
+            } else {
+                toast.info(`${found.descripcion}: ${newCount}/${expectedQty}`)
             }
         } else {
+            // Unknown code - open modal for more info
             const tempDetalle: DetallePalet = {
                 id: "temp",
                 codigo: code,
                 itemCode: code,
-                descripcion: "Código escaneado",
+                descripcion: "Código no reconocido",
                 cantidad: 0,
                 unidad: "UNID",
                 estado: "Pendiente"
             }
             setScannedPaletData(tempDetalle)
             setShowEditModal(true)
-            toast.info("Código escaneado - Complete los datos")
+            toast.warning("Código no está en esta orden")
         }
     }
 
@@ -881,6 +903,17 @@ export default function MobileScannerPage() {
                             )
                         }
                     </div >
+
+                    {/* Finalize Button - visible when at least one scan */}
+                    {Object.keys(scanCounts).length > 0 && (
+                        <Button
+                            className="w-full h-14 font-bold text-lg bg-green-600 hover:bg-green-700 shadow-lg text-white"
+                            onClick={() => setShowConfirmModal(true)}
+                        >
+                            <CheckCircle2 className="w-5 h-5 mr-2" />
+                            FINALIZAR INGRESO ({Object.values(scanCounts).reduce((a, b) => a + b, 0)} items)
+                        </Button>
+                    )}
                 </div >
             </div >
 
@@ -893,6 +926,50 @@ export default function MobileScannerPage() {
                 onValidar={handleModalValidar}
                 onAlmacenar={handleModalAlmacenar}
                 onActualizar={handleModalActualizar}
+            />
+
+            {/* Modal de confirmación de ingreso */}
+            <ConfirmIngresoModal
+                isOpen={showConfirmModal}
+                onClose={() => setShowConfirmModal(false)}
+                onConfirm={async (observacion: string) => {
+                    if (!currentDoc) return
+                    // Build detalles array from scanCounts
+                    const orden = ordenes.find(o => o.id.toString() === currentDoc.id)
+                    if (!orden) return
+
+                    const detallesPayload = orden.detalles.map(d => ({
+                        detalleId: d.id,
+                        cantidadRecibida: scanCounts[d.item.codigo] || 0,
+                        ubicacion: 'SIN-UBICACION'
+                    }))
+
+                    await MovilService.confirmarIngreso(
+                        Number(currentDoc.id),
+                        detallesPayload,
+                        observacion,
+                        'MOBILE_USER'
+                    )
+
+                    toast.success('Ingreso confirmado. Stock actualizado.')
+                    setScanCounts({})
+                    setStep('search')
+                    await loadOrdenes(workMode)
+                }}
+                nroDocumento={currentDoc?.nroDocumento || ''}
+                detalles={
+                    currentDoc?.palets.map(p => {
+                        const orden = ordenes.find(o => o.id.toString() === currentDoc.id)
+                        const detalle = orden?.detalles.find(d => d.item.codigo === p.itemCode)
+                        return {
+                            id: p.id,
+                            itemCode: p.itemCode,
+                            descripcion: p.descripcion,
+                            cantidadEsperada: detalle?.cantidadEsperada || 0,
+                            cantidadEscaneada: scanCounts[p.itemCode] || 0
+                        }
+                    }) || []
+                }
             />
         </>
     )
