@@ -144,7 +144,7 @@ export default function MobileScannerPage() {
     const [scanCounts, setScanCounts] = useState<Record<string, number>>({})
 
     // --- LOAD DATA ---
-    const loadOrdenes = async (mode: "validation" | "storage") => {
+    const loadOrdenes = async (mode: "validation" | "storage"): Promise<OrdenMovil[]> => {
         setIsLoading(true)
         try {
             const data = mode === "validation"
@@ -152,11 +152,35 @@ export default function MobileScannerPage() {
                 : await MovilService.getOrdenesPorAlmacenar()
             setOrdenes(data)
             console.log(`Órdenes cargadas (${mode}):`, data)
+            return data
         } catch (error) {
             console.error("Error cargando órdenes:", error)
             toast.error("Error al cargar órdenes")
+            return []
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    // Helper para cambiar de modo y recargar datos
+    const handleModeSwitch = async (newMode: "validation" | "storage") => {
+        setWorkMode(newMode)
+        setScannedPaletData(null)
+        setInputPalet("")
+        setScanCounts({})
+
+        // Recargar órdenes para el nuevo modo
+        const newOrdenes = await loadOrdenes(newMode)
+
+        // Si hay documento actual, buscar su versión actualizada
+        if (currentDoc) {
+            const updatedOrden = newOrdenes.find(o => o.id.toString() === currentDoc.id)
+            if (updatedOrden) {
+                setCurrentDoc(mapOrdenToDocumento(updatedOrden))
+            } else {
+                // La orden ya no está en este modo (completado), preguntar qué hacer
+                toast.info("El documento actual no tiene items pendientes en este modo")
+            }
         }
     }
 
@@ -648,9 +672,15 @@ export default function MobileScannerPage() {
     const getFilteredPalets = () => {
         if (!currentDoc) return []
         if (workMode === "validation") {
-            return currentDoc.palets.filter(p => p.estado === "Pendiente")
+            // En modo validación: mostrar pendientes
+            return currentDoc.palets.filter(p =>
+                p.estadoBackend === EstadoDetalle.PENDIENTE || p.estado === "Pendiente"
+            )
         } else {
-            return currentDoc.palets.filter(p => p.estado === "Validado")
+            // En modo almacenaje: mostrar validados (listos para almacenar)
+            return currentDoc.palets.filter(p =>
+                p.estadoBackend === EstadoDetalle.VALIDADO || p.estado === "Validado"
+            )
         }
     }
 
@@ -829,7 +859,7 @@ export default function MobileScannerPage() {
                                 size="sm"
                                 variant={workMode === "validation" ? "default" : "secondary"}
                                 className={cn("h-7 text-xs", workMode === "validation" ? "bg-orange-600" : "bg-slate-700")}
-                                onClick={() => { setWorkMode("validation"); setScannedPaletData(null); }}
+                                onClick={() => handleModeSwitch("validation")}
                             >
                                 Validar
                             </Button>
@@ -837,7 +867,7 @@ export default function MobileScannerPage() {
                                 size="sm"
                                 variant={workMode === "storage" ? "default" : "secondary"}
                                 className={cn("h-7 text-xs", workMode === "storage" ? "bg-orange-600" : "bg-slate-700")}
-                                onClick={() => { setWorkMode("storage"); setScannedPaletData(null); }}
+                                onClick={() => handleModeSwitch("storage")}
                             >
                                 Almacen
                             </Button>
