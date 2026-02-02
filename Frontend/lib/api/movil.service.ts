@@ -46,15 +46,33 @@ export const MovilService = {
         cantidadRecibida: number,
         usuario: string
     ): Promise<ValidarDetalleResponse> {
+        // Asegurar tipos correctos para el backend
+        const payload = {
+            detalleId: Number(detalleId),
+            cantidadRecibida: Number(cantidadRecibida),
+            usuario: String(usuario)
+        };
+        console.log("[MovilService] validarDetalle payload:", payload);
+
         const res = await fetch(`${API_ENDPOINTS.movil}/validar-detalle`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ detalleId, cantidadRecibida, usuario }),
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.message || "Error al validar detalle");
+            let errorMessage = "Error al validar detalle";
+            try {
+                const errorData = await res.json();
+                errorMessage = errorData.message || "Error desconocido del servidor";
+                // Chequeo específico para error de validación de NestJS (whitelist)
+                if (Array.isArray(errorData.message) && errorData.message[0]?.includes("should not exist")) {
+                    errorMessage = "Error Backend: El DTO no acepta estos campos. Faltan decoradores @IsNumber/@IsString en el Backend.";
+                }
+            } catch (e) {
+                errorMessage = res.statusText;
+            }
+            throw new Error(errorMessage);
         }
 
         return await res.json();
@@ -88,10 +106,18 @@ export const MovilService = {
         ubicacion: string,
         usuario: string
     ): Promise<AlmacenarDetalleResponse> {
+        // Asegurar tipos correctos
+        const payload = {
+            detalleId: Number(detalleId),
+            ubicacion: String(ubicacion),
+            usuario: String(usuario)
+        };
+        console.log("[MovilService] almacenarDetalle payload:", payload);
+
         const res = await fetch(`${API_ENDPOINTS.movil}/almacenar-detalle`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ detalleId, ubicacion, usuario }),
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) {

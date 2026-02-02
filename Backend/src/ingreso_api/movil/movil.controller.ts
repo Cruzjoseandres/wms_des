@@ -1,25 +1,60 @@
 import { Controller, Post, Get, Body, Param } from '@nestjs/common';
 import { MovilService } from './movil.service';
+import { IsNumber, IsString, IsOptional, ValidateNested, IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
 
 // ============================================
 // DTOs para endpoints existentes
 // ============================================
 
 class EscanearValidarDto {
+    @IsString()
     codigoBarra: string;
+
+    @IsOptional()
+    @IsString()
     usuarioId?: string;
 }
 
 class EscanearAlmacenarDto {
+    @IsString()
     codigoBarra: string;
+
+    @IsString()
     ubicacionDestino: string;
+
+    @IsOptional()
+    @IsString()
     usuarioId?: string;
 }
 
+class DetalleConfirmacionDto {
+    @IsNumber()
+    detalleId: number;
+
+    @IsNumber()
+    cantidadRecibida: number;
+
+    @IsOptional()
+    @IsString()
+    ubicacion?: string;
+}
+
 class ConfirmarIngresoDto {
+    @IsNumber()
     notaIngresoId: number;
-    detalles: { detalleId: number; cantidadRecibida: number; ubicacion?: string }[];
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => DetalleConfirmacionDto)
+    detalles: DetalleConfirmacionDto[];
+
+    @IsOptional()
+    @IsString()
     observacion?: string;
+
+    @IsOptional()
+    @IsString()
     usuarioId?: string;
 }
 
@@ -28,24 +63,44 @@ class ConfirmarIngresoDto {
 // ============================================
 
 class IniciarValidacionDto {
+    @IsNumber()
     detalleId: number;
+
+    @IsOptional()
+    @IsString()
     usuario?: string;
 }
 
 class ValidarDetalleDto {
+    @IsNumber()
     detalleId: number;
+
+    @IsNumber()
     cantidadRecibida: number;
+
+    @IsOptional()
+    @IsString()
     usuario?: string;
 }
 
 class IniciarAlmacenajeDto {
+    @IsNumber()
     detalleId: number;
+
+    @IsOptional()
+    @IsString()
     usuario?: string;
 }
 
 class AlmacenarDetalleDto {
+    @IsNumber()
     detalleId: number;
+
+    @IsString()
     ubicacion: string;
+
+    @IsOptional()
+    @IsString()
     usuario?: string;
 }
 
