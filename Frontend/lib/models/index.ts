@@ -23,11 +23,21 @@ export type {
 } from './nota-ingreso.model';
 
 // Móvil
+export {
+    EstadoDetalle,
+    EstadoDetalleNombre,
+} from './movil.model';
 export type {
     DetalleMovil,
     OrdenMovil,
+    ResumenOrden,
     ValidarResponse,
     AlmacenarResponse,
+    IniciarValidacionResponse,
+    ValidarDetalleResponse,
+    IniciarAlmacenajeResponse,
+    AlmacenarDetalleResponse,
+    MetricasOperario,
 } from './movil.model';
 
 // Stock Inventario

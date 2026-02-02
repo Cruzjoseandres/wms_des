@@ -3,15 +3,126 @@ import type {
     OrdenMovil,
     ValidarResponse,
     AlmacenarResponse,
+    IniciarValidacionResponse,
+    ValidarDetalleResponse,
+    IniciarAlmacenajeResponse,
+    AlmacenarDetalleResponse,
+    MetricasOperario,
 } from "@/lib/models";
 
 /**
  * Servicio para operaciones móviles (PDA/Scanner)
  */
 export const MovilService = {
+    // ========================================
+    // NUEVOS ENDPOINTS - Validación Individual
+    // ========================================
+
     /**
-     * Valida un item por código de barra (Operario 1)
-     * Cambia estado: PALETIZADO → VALIDADO
+     * Inicia el proceso de validación de un detalle
+     * Captura timestamp para métricas de productividad
+     */
+    async iniciarValidacion(detalleId: number, usuario: string): Promise<IniciarValidacionResponse> {
+        const res = await fetch(`${API_ENDPOINTS.movil}/iniciar-validacion`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ detalleId, usuario }),
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Error al iniciar validación");
+        }
+
+        return await res.json();
+    },
+
+    /**
+     * Valida un detalle específico con cantidad recibida
+     * Cambia estado: PENDIENTE → VALIDADO
+     */
+    async validarDetalle(
+        detalleId: number,
+        cantidadRecibida: number,
+        usuario: string
+    ): Promise<ValidarDetalleResponse> {
+        const res = await fetch(`${API_ENDPOINTS.movil}/validar-detalle`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ detalleId, cantidadRecibida, usuario }),
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Error al validar detalle");
+        }
+
+        return await res.json();
+    },
+
+    /**
+     * Inicia el proceso de almacenaje de un detalle
+     * Captura timestamp para métricas de productividad
+     */
+    async iniciarAlmacenaje(detalleId: number, usuario: string): Promise<IniciarAlmacenajeResponse> {
+        const res = await fetch(`${API_ENDPOINTS.movil}/iniciar-almacenaje`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ detalleId, usuario }),
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Error al iniciar almacenaje");
+        }
+
+        return await res.json();
+    },
+
+    /**
+     * Almacena un detalle específico en una ubicación
+     * Cambia estado: VALIDADO → ALMACENADO
+     */
+    async almacenarDetalle(
+        detalleId: number,
+        ubicacion: string,
+        usuario: string
+    ): Promise<AlmacenarDetalleResponse> {
+        const res = await fetch(`${API_ENDPOINTS.movil}/almacenar-detalle`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ detalleId, ubicacion, usuario }),
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Error al almacenar detalle");
+        }
+
+        return await res.json();
+    },
+
+    /**
+     * Obtiene métricas de productividad de un operario
+     */
+    async getMetricasOperario(usuarioId: string): Promise<MetricasOperario> {
+        const res = await fetch(`${API_ENDPOINTS.movil}/metricas-operario/${usuarioId}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+        });
+
+        if (!res.ok) throw new Error("Error al obtener métricas");
+        return await res.json();
+    },
+
+    // ========================================
+    // ENDPOINTS EXISTENTES (Actualizados)
+    // ========================================
+
+    /**
+     * Legacy: Valida un item por código de barra
+     * @deprecated Usar validarDetalle para validación individual
      */
     async validar(codigoBarra: string, usuarioId?: string): Promise<ValidarResponse> {
         const res = await fetch(`${API_ENDPOINTS.movil}/validar`, {
@@ -32,8 +143,8 @@ export const MovilService = {
     },
 
     /**
-     * Almacena un item en una ubicación (Operario 2)
-     * Cambia estado: VALIDADO → ALMACENADO
+     * Legacy: Almacena un item en una ubicación
+     * @deprecated Usar almacenarDetalle para almacenaje individual
      */
     async almacenar(codigoBarra: string, ubicacionDestino: string, usuarioId?: string): Promise<AlmacenarResponse> {
         const res = await fetch(`${API_ENDPOINTS.movil}/almacenar`, {
@@ -55,7 +166,8 @@ export const MovilService = {
     },
 
     /**
-     * Obtiene órdenes pendientes de validar
+     * Obtiene órdenes con detalles pendientes de validar
+     * Ahora incluye estado individual de cada detalle y resumen
      */
     async getOrdenesPorValidar(): Promise<OrdenMovil[]> {
         const res = await fetch(`${API_ENDPOINTS.movil}/ordenes/por-validar`, {
@@ -69,7 +181,8 @@ export const MovilService = {
     },
 
     /**
-     * Obtiene órdenes pendientes de almacenar
+     * Obtiene órdenes con detalles validados pendientes de almacenar
+     * Solo incluye detalles en estado VALIDADO
      */
     async getOrdenesPorAlmacenar(): Promise<OrdenMovil[]> {
         const res = await fetch(`${API_ENDPOINTS.movil}/ordenes/por-almacenar`, {
@@ -84,7 +197,7 @@ export const MovilService = {
 
     /**
      * Confirma ingreso con cantidades reales recibidas
-     * Actualiza stock y cambia estado a ALMACENADO
+     * @deprecated Usar validarDetalle + almacenarDetalle por cada producto
      */
     async confirmarIngreso(
         notaIngresoId: number,

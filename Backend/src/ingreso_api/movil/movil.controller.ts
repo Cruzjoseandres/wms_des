@@ -1,5 +1,9 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param } from '@nestjs/common';
 import { MovilService } from './movil.service';
+
+// ============================================
+// DTOs para endpoints existentes
+// ============================================
 
 class EscanearValidarDto {
     codigoBarra: string;
@@ -19,14 +23,43 @@ class ConfirmarIngresoDto {
     usuarioId?: string;
 }
 
+// ============================================
+// DTOs para validación individual por detalle
+// ============================================
+
+class IniciarValidacionDto {
+    detalleId: number;
+    usuario?: string;
+}
+
+class ValidarDetalleDto {
+    detalleId: number;
+    cantidadRecibida: number;
+    usuario?: string;
+}
+
+class IniciarAlmacenajeDto {
+    detalleId: number;
+    usuario?: string;
+}
+
+class AlmacenarDetalleDto {
+    detalleId: number;
+    ubicacion: string;
+    usuario?: string;
+}
+
 @Controller('api/movil')
 export class MovilController {
     constructor(private readonly movilService: MovilService) { }
 
+    // ============================================
+    // ENDPOINTS EXISTENTES (por orden completa)
+    // ============================================
+
     /**
      * POST /api/movil/validar
-     * Operario 1: Valida un item por código de barra
-     * Cambia estado de PALETIZADO -> VALIDADO
+     * Operario 1: Valida un item por código de barra (orden completa)
      */
     @Post('validar')
     async escanearValidar(@Body() dto: EscanearValidarDto) {
@@ -38,9 +71,7 @@ export class MovilController {
 
     /**
      * POST /api/movil/almacenar
-     * Operario 2: Almacena un item en una ubicación
-     * Cambia estado de VALIDADO -> ALMACENADO
-     * Registra stock en stock_inventario
+     * Operario 2: Almacena un item en una ubicación (orden completa)
      */
     @Post('almacenar')
     async escanearAlmacenar(@Body() dto: EscanearAlmacenarDto) {
@@ -65,9 +96,67 @@ export class MovilController {
         );
     }
 
+    // ============================================
+    // ENDPOINTS DE VALIDACIÓN INDIVIDUAL
+    // ============================================
+
+    /**
+     * POST /api/movil/iniciar-validacion
+     * Marca el inicio de validación de un detalle (captura tiempo)
+     */
+    @Post('iniciar-validacion')
+    async iniciarValidacion(@Body() dto: IniciarValidacionDto) {
+        return await this.movilService.iniciarValidacion(
+            dto.detalleId,
+            dto.usuario || 'USUARIO_MOVIL',
+        );
+    }
+
+    /**
+     * POST /api/movil/validar-detalle
+     * Valida un detalle específico con la cantidad recibida
+     */
+    @Post('validar-detalle')
+    async validarDetalle(@Body() dto: ValidarDetalleDto) {
+        return await this.movilService.validarDetalle(
+            dto.detalleId,
+            dto.cantidadRecibida,
+            dto.usuario || 'USUARIO_MOVIL',
+        );
+    }
+
+    /**
+     * POST /api/movil/iniciar-almacenaje
+     * Marca el inicio de almacenaje de un detalle (captura tiempo)
+     */
+    @Post('iniciar-almacenaje')
+    async iniciarAlmacenaje(@Body() dto: IniciarAlmacenajeDto) {
+        return await this.movilService.iniciarAlmacenaje(
+            dto.detalleId,
+            dto.usuario || 'USUARIO_MOVIL',
+        );
+    }
+
+    /**
+     * POST /api/movil/almacenar-detalle
+     * Almacena un detalle específico en una ubicación
+     */
+    @Post('almacenar-detalle')
+    async almacenarDetalle(@Body() dto: AlmacenarDetalleDto) {
+        return await this.movilService.almacenarDetalle(
+            dto.detalleId,
+            dto.ubicacion,
+            dto.usuario || 'USUARIO_MOVIL',
+        );
+    }
+
+    // ============================================
+    // ENDPOINTS DE CONSULTA
+    // ============================================
+
     /**
      * GET /api/movil/ordenes/por-validar
-     * Obtiene órdenes pendientes de validar
+     * Obtiene órdenes con detalles pendientes de validar
      */
     @Get('ordenes/por-validar')
     async obtenerPorValidar() {
@@ -76,10 +165,19 @@ export class MovilController {
 
     /**
      * GET /api/movil/ordenes/por-almacenar
-     * Obtiene órdenes pendientes de almacenar
+     * Obtiene órdenes con detalles listos para almacenar
      */
     @Get('ordenes/por-almacenar')
     async obtenerPorAlmacenar() {
         return await this.movilService.obtenerPorAlmacenar();
+    }
+
+    /**
+     * GET /api/movil/metricas-operario/:usuarioId
+     * Obtiene métricas de productividad de un operario
+     */
+    @Get('metricas-operario/:usuarioId')
+    async obtenerMetricasOperario(@Param('usuarioId') usuarioId: string) {
+        return await this.movilService.obtenerMetricasOperario(usuarioId);
     }
 }

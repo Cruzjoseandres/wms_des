@@ -14,12 +14,13 @@ import {
     ChevronUp,
     Box,
     CheckCircle2,
-    Loader2
+    Loader2,
+    Package
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { MovilService } from "@/lib/api/movil.service"
-import type { OrdenMovil } from "@/lib/models"
+import { EstadoDetalle, type OrdenMovil, type DetalleMovil } from "@/lib/models"
 import { EditDetalleModal } from "@/components/ingresos/edit-detalle-modal"
 import { ConfirmIngresoModal } from "@/components/ingresos/confirm-ingreso-modal"
 import { useScanDetection } from "@/hooks/use-scan-detection"
@@ -27,12 +28,16 @@ import { useScanDetection } from "@/hooks/use-scan-detection"
 // --- TYPES ---
 interface DetallePalet {
     id: string
+    detalleId: number // ID del backend para API calls
     codigo: string // LPN / Pallet ID o código de producto
     itemCode: string
     descripcion: string
     cantidad: number
+    cantidadEsperada: number
+    cantidadRecibida: number
     unidad: string
     estado: "Pendiente" | "Validado" | "Almacenado" | "Reportado"
+    estadoBackend: EstadoDetalle
     ubicacion?: string
     lote?: string
 }
@@ -44,29 +49,65 @@ interface DocumentoIngreso {
     tipoIngreso: string
     estadoGlobal: string
     palets: DetallePalet[]
+    resumen?: {
+        totalDetalles: number
+        pendientes: number
+        validados: number
+        almacenados: number
+    }
+}
+
+// Helper para mapear estado del backend a string de UI
+function getEstadoUI(estado: EstadoDetalle): "Pendiente" | "Validado" | "Almacenado" {
+    switch (estado) {
+        case EstadoDetalle.VALIDADO: return "Validado"
+        case EstadoDetalle.ALMACENADO: return "Almacenado"
+        default: return "Pendiente"
+    }
 }
 
 // Helper para mapear órdenes del backend al formato del componente
 function mapOrdenToDocumento(orden: OrdenMovil): DocumentoIngreso {
-    const palets: DetallePalet[] = orden.detalles.map((d) => ({
+    const palets: DetallePalet[] = orden.detalles.map((d: DetalleMovil) => ({
         id: String(d.id),
-        codigo: d.item.codigoBarra || d.item.codigo, // Código de barra o código del item
+        detalleId: d.id,
+        codigo: d.item.codigoBarra || d.item.codigo,
         itemCode: d.item.codigo,
         descripcion: d.item.descripcion,
         cantidad: d.cantidad,
+        cantidadEsperada: d.cantidadEsperada,
+        cantidadRecibida: d.cantidadRecibida || 0,
         unidad: "UNID",
-        estado: orden.estado === "VALIDADO" ? "Validado" : "Pendiente",
+        estado: getEstadoUI(d.estado),
+        estadoBackend: d.estado,
         lote: d.lote || undefined,
     }))
+
+    // Determinar estado global basado en los detalles
+    const pendientes = palets.filter(p => p.estadoBackend === EstadoDetalle.PENDIENTE).length
+    const validados = palets.filter(p => p.estadoBackend === EstadoDetalle.VALIDADO).length
+    const almacenados = palets.filter(p => p.estadoBackend === EstadoDetalle.ALMACENADO).length
+
+    let estadoGlobal = "POR VALIDAR"
+    if (almacenados === palets.length) {
+        estadoGlobal = "COMPLETADO"
+    } else if (validados > 0 || almacenados > 0) {
+        estadoGlobal = "PARCIAL"
+    }
 
     return {
         id: String(orden.id),
         nroDocumento: orden.nroDocumento,
         fecha: new Date(orden.createdAt).toLocaleString("es-ES"),
         tipoIngreso: orden.origen,
-        estadoGlobal: orden.estado === "PALETIZADO" ? "POR VALIDAR" :
-            orden.estado === "VALIDADO" ? "POR ALMACENAR" : orden.estado,
+        estadoGlobal,
         palets,
+        resumen: orden.resumen || {
+            totalDetalles: palets.length,
+            pendientes,
+            validados,
+            almacenados,
+        }
     }
 }
 
@@ -222,11 +263,13 @@ export default function MobileScannerPage() {
     }
 
     // --- MODAL HANDLERS ---
+    // These handlers use 'any' because EditDetalleModal has its own internal type
     const handleModalClose = () => {
         setShowEditModal(false)
     }
 
-    const handleModalValidar = async (detalle: DetallePalet) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleModalValidar = async (detalle: any) => {
         setProcessingAction(true)
         try {
             const result = await MovilService.validar(detalle.codigo, "PDA_USER")
@@ -252,7 +295,8 @@ export default function MobileScannerPage() {
         }
     }
 
-    const handleModalAlmacenar = async (detalle: DetallePalet, ubicacion: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleModalAlmacenar = async (detalle: any, ubicacion: string) => {
         setProcessingAction(true)
         try {
             const result = await MovilService.almacenar(detalle.codigo, ubicacion, "PDA_USER")
@@ -281,7 +325,8 @@ export default function MobileScannerPage() {
         }
     }
 
-    const handleModalActualizar = (detalle: DetallePalet, cambios: Partial<DetallePalet>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleModalActualizar = (detalle: any, cambios: any) => {
         if (!currentDoc) return
 
         const updatedPalets = currentDoc.palets.map(p =>
@@ -305,28 +350,134 @@ export default function MobileScannerPage() {
         return detalle?.cantidadEsperada || 0
     }
 
-    // Helper for direct scanning - NOW COUNTS INSTEAD OF OPENING MODAL
-    const handleScanPaletWithCode = (code: string) => {
+    // Helper to get detalle by code
+    const getDetalleByCode = (code: string): DetallePalet | undefined => {
+        return currentDoc?.palets.find(p =>
+            p.codigo === code || p.itemCode === code
+        )
+    }
+
+    // Handle individual product validation
+    const handleValidarProducto = async (detalle: DetallePalet, cantidad: number) => {
+        setProcessingAction(true)
+        try {
+            const result = await MovilService.validarDetalle(
+                detalle.detalleId,
+                cantidad,
+                "MOBILE_USER"
+            )
+
+            toast.success(`✓ ${detalle.descripcion} validado (${cantidad} unidades)`)
+
+            // Update local state
+            if (currentDoc) {
+                const updatedPalets = currentDoc.palets.map(p =>
+                    p.id === detalle.id
+                        ? { ...p, estado: "Validado" as const, estadoBackend: EstadoDetalle.VALIDADO, cantidadRecibida: cantidad }
+                        : p
+                )
+                const validados = updatedPalets.filter(p => p.estadoBackend === EstadoDetalle.VALIDADO).length
+                const almacenados = updatedPalets.filter(p => p.estadoBackend === EstadoDetalle.ALMACENADO).length
+                const pendientes = updatedPalets.filter(p => p.estadoBackend === EstadoDetalle.PENDIENTE).length
+
+                setCurrentDoc({
+                    ...currentDoc,
+                    palets: updatedPalets,
+                    estadoGlobal: pendientes === 0 ? "VALIDADO" : "PARCIAL",
+                    resumen: { totalDetalles: updatedPalets.length, pendientes, validados, almacenados }
+                })
+            }
+
+            // Clear current selection
+            setScannedPaletData(null)
+            setInputPalet("")
+            setScanCounts(prev => {
+                const newCounts = { ...prev }
+                delete newCounts[detalle.itemCode]
+                return newCounts
+            })
+
+            // Reload data
+            await loadOrdenes(workMode)
+
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Error al validar"
+            toast.error(errorMessage)
+        } finally {
+            setProcessingAction(false)
+        }
+    }
+
+    // Handle individual product storage
+    const handleAlmacenarProducto = async (detalle: DetallePalet, ubicacion: string) => {
+        setProcessingAction(true)
+        try {
+            const result = await MovilService.almacenarDetalle(
+                detalle.detalleId,
+                ubicacion,
+                "MOBILE_USER"
+            )
+
+            toast.success(`✓ ${detalle.descripcion} almacenado en ${ubicacion}`)
+
+            // Update local state
+            if (currentDoc) {
+                const updatedPalets = currentDoc.palets.map(p =>
+                    p.id === detalle.id
+                        ? { ...p, estado: "Almacenado" as const, estadoBackend: EstadoDetalle.ALMACENADO, ubicacion }
+                        : p
+                )
+                const validados = updatedPalets.filter(p => p.estadoBackend === EstadoDetalle.VALIDADO).length
+                const almacenados = updatedPalets.filter(p => p.estadoBackend === EstadoDetalle.ALMACENADO).length
+                const pendientes = updatedPalets.filter(p => p.estadoBackend === EstadoDetalle.PENDIENTE).length
+
+                setCurrentDoc({
+                    ...currentDoc,
+                    palets: updatedPalets,
+                    estadoGlobal: almacenados === updatedPalets.length ? "COMPLETADO" : "PARCIAL",
+                    resumen: { totalDetalles: updatedPalets.length, pendientes, validados, almacenados }
+                })
+            }
+
+            // Clear inputs
+            setScannedPaletData(null)
+            setInputPalet("")
+            setInputLocation("")
+
+            // Reload data
+            await loadOrdenes(workMode)
+
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Error al almacenar"
+            toast.error(errorMessage)
+        } finally {
+            setProcessingAction(false)
+        }
+    }
+
+    // Helper for direct scanning - Count and auto-validate when complete
+    const handleScanPaletWithCode = async (code: string) => {
         if (!currentDoc) return
 
         console.log("[SCAN] Code received:", code)
-        console.log("[SCAN] Available palets:", currentDoc.palets.map(p => ({
-            codigo: p.codigo,
-            itemCode: p.itemCode
-        })))
 
-        const found = currentDoc.palets.find(p =>
-            p.codigo === code ||
-            p.itemCode === code
-        )
-
-        console.log("[SCAN] Found:", found ? found.itemCode : "NOT FOUND")
+        const found = getDetalleByCode(code)
 
         if (found) {
+            // Check if already processed
+            if (workMode === "validation" && found.estadoBackend !== EstadoDetalle.PENDIENTE) {
+                toast.warning(`${found.descripcion} ya fue validado`)
+                return
+            }
+            if (workMode === "storage" && found.estadoBackend !== EstadoDetalle.VALIDADO) {
+                toast.warning(`${found.descripcion} no está listo para almacenar`)
+                return
+            }
+
             // Increment scan count for this item
             const itemKey = found.itemCode
             const currentCount = scanCounts[itemKey] || 0
-            const expectedQty = getExpectedQty(itemKey) || Number(found.cantidad) || 1
+            const expectedQty = found.cantidadEsperada || getExpectedQty(itemKey) || 1
             const newCount = currentCount + 1
 
             console.log("[SCAN] Incrementing count:", { itemKey, currentCount, newCount, expectedQty })
@@ -335,9 +486,14 @@ export default function MobileScannerPage() {
             setScannedPaletData(found)
             setInputPalet(code)
 
-            // Show progress toast
+            // Show progress toast and auto-validate when complete
             if (newCount >= expectedQty) {
                 toast.success(`✓ ${found.descripcion}: ${newCount}/${expectedQty} COMPLETO`)
+
+                // Auto-validate if in validation mode
+                if (workMode === "validation") {
+                    await handleValidarProducto(found, newCount)
+                }
             } else {
                 toast.info(`${found.descripcion}: ${newCount}/${expectedQty}`)
             }
@@ -346,12 +502,16 @@ export default function MobileScannerPage() {
             console.log("[SCAN] Code not found, opening modal")
             const tempDetalle: DetallePalet = {
                 id: "temp",
+                detalleId: 0,
                 codigo: code,
                 itemCode: code,
                 descripcion: "Código no reconocido",
                 cantidad: 0,
+                cantidadEsperada: 0,
+                cantidadRecibida: 0,
                 unidad: "UNID",
-                estado: "Pendiente"
+                estado: "Pendiente",
+                estadoBackend: EstadoDetalle.PENDIENTE
             }
             setScannedPaletData(tempDetalle)
             setShowEditModal(true)
@@ -513,100 +673,118 @@ export default function MobileScannerPage() {
     // --- SEARCH VIEW ---
     if (step === "search") {
         return (
-            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 space-y-6">
-                <div className="text-center space-y-2">
-                    <div className="bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
-                        <ScanBarcode className="w-10 h-10 text-primary" />
+            <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-start p-4 pt-12 space-y-6">
+                {/* Header */}
+                <div className="text-center space-y-3">
+                    <div className="bg-gradient-to-br from-orange-500 to-orange-600 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-orange-500/30">
+                        <ScanBarcode className="w-10 h-10 text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-900">Scanner WMS</h1>
-                    <p className="text-slate-500">
+                    <h1 className="text-2xl font-bold text-white">Scanner WMS</h1>
+                    <p className="text-slate-400 text-sm">
                         {workMode === "validation"
-                            ? "Órdenes pendientes de validar"
-                            : "Órdenes pendientes de almacenar"}
+                            ? "Validación de productos"
+                            : "Almacenamiento en ubicaciones"}
                     </p>
                 </div>
 
                 {/* Mode Toggle */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 bg-slate-800/50 p-1 rounded-xl">
                     <Button
-                        variant={workMode === "validation" ? "default" : "outline"}
+                        variant="ghost"
                         onClick={() => setWorkMode("validation")}
-                        className={cn(workMode === "validation" && "bg-orange-600 hover:bg-orange-700")}
+                        className={cn(
+                            "px-6 h-10 rounded-lg transition-all",
+                            workMode === "validation"
+                                ? "bg-orange-600 text-white hover:bg-orange-600"
+                                : "text-slate-400 hover:text-white hover:bg-slate-700"
+                        )}
                     >
                         Validar
                     </Button>
                     <Button
-                        variant={workMode === "storage" ? "default" : "outline"}
+                        variant="ghost"
                         onClick={() => setWorkMode("storage")}
-                        className={cn(workMode === "storage" && "bg-orange-600 hover:bg-orange-700")}
+                        className={cn(
+                            "px-6 h-10 rounded-lg transition-all",
+                            workMode === "storage"
+                                ? "bg-orange-600 text-white hover:bg-orange-600"
+                                : "text-slate-400 hover:text-white hover:bg-slate-700"
+                        )}
                     >
                         Almacenar
                     </Button>
                 </div>
 
+                {/* Zebra Scanner Active Indicator */}
+                <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 px-4 py-2 rounded-full">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                    <span className="text-blue-400 text-xs font-medium">Escáner Zebra Activo</span>
+                </div>
+
                 {/* Órdenes disponibles */}
-                <Card className="w-full max-w-md shadow-lg border-primary/20">
+                <Card className="w-full max-w-md bg-slate-800/80 border-slate-700 shadow-xl">
                     <CardContent className="pt-6 space-y-4">
                         {isLoading ? (
-                            <div className="flex justify-center py-8">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <div className="flex flex-col items-center justify-center py-8 gap-3">
+                                <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                                <span className="text-slate-400 text-sm">Cargando órdenes...</span>
                             </div>
                         ) : ordenes.length === 0 ? (
-                            <div className="text-center py-8 text-slate-500">
-                                No hay órdenes {workMode === "validation" ? "por validar" : "por almacenar"}
+                            <div className="text-center py-8">
+                                <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
+                                    <Box className="w-8 h-8 text-slate-500" />
+                                </div>
+                                <p className="text-slate-400">
+                                    No hay órdenes {workMode === "validation" ? "por validar" : "por almacenar"}
+                                </p>
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-600">
-                                    Seleccione o escanee documento ({ordenes.length} disponibles)
-                                </label>
-                                {ordenes.slice(0, 5).map(orden => (
-                                    <button
-                                        key={orden.id}
-                                        className="w-full p-3 text-left bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                                        onClick={() => {
-                                            setCurrentDoc(mapOrdenToDocumento(orden))
-                                            setStep("work")
-                                        }}
-                                    >
-                                        <div className="font-mono font-bold">{orden.nroDocumento}</div>
-                                        <div className="text-xs text-slate-500">
-                                            {orden.detalles.length} items • {orden.almacen.descripcion}
-                                        </div>
-                                    </button>
-                                ))}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-medium text-slate-300">
+                                        Órdenes disponibles
+                                    </label>
+                                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
+                                        {ordenes.length}
+                                    </Badge>
+                                </div>
+                                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                    {ordenes.slice(0, 5).map(orden => (
+                                        <button
+                                            key={orden.id}
+                                            className="w-full p-3 text-left bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-orange-500/50 rounded-xl transition-all group"
+                                            onClick={() => {
+                                                setCurrentDoc(mapOrdenToDocumento(orden))
+                                                setStep("work")
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-mono font-bold text-white group-hover:text-orange-400 transition-colors">
+                                                    {orden.nroDocumento}
+                                                </span>
+                                                <ChevronDown className="w-4 h-4 text-slate-500 -rotate-90" />
+                                            </div>
+                                            <div className="text-xs text-slate-400 mt-1">
+                                                {orden.detalles.length} items • {orden.almacen.descripcion}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
-                        <div className="border-t pt-4 space-y-2">
-                            <label className="text-sm font-medium">O buscar por número</label>
+                        <div className="border-t border-slate-700 pt-4 space-y-3">
+                            <label className="text-sm font-medium text-slate-300">Buscar por número</label>
                             <div className="flex gap-2">
                                 <Input
                                     value={docQuery}
                                     onChange={(e) => setDocQuery(e.target.value)}
                                     onKeyDown={(e) => handleInputKeyDown(e, "doc")}
                                     placeholder="Nro documento..."
-                                    className="h-12 text-lg"
+                                    className="h-12 text-lg bg-slate-700 border-slate-600 text-white placeholder:text-slate-500 focus-visible:ring-orange-500"
                                 />
                                 <Button
-                                    variant="outline"
-                                    className="h-12 w-12 shrink-0 border-slate-300 text-slate-500 hover:text-primary hover:border-primary"
-                                    onClick={() => {
-                                        toast.info("Zebra Scanner activo: Presione el gatillo físico")
-                                    }}
-                                    title="Zebra Scanner (Hardware)"
-                                >
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
-                                        <path d="M3 7V5c0-1.1.9-2 2-2h2" />
-                                        <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
-                                        <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
-                                        <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
-                                        <path d="M7 7h10v10H7z" />
-                                        <path d="M12 17v-6" />
-                                    </svg>
-                                </Button>
-                                <Button
-                                    className="h-12 w-12 shrink-0 bg-primary hover:bg-primary/90"
+                                    className="h-12 w-12 shrink-0 bg-orange-600 hover:bg-orange-700"
                                     onClick={() => startScanner("doc")}
                                     title="Cámara"
                                 >
@@ -614,15 +792,21 @@ export default function MobileScannerPage() {
                                 </Button>
                             </div>
                             <Button
-                                className="w-full h-12 text-lg bg-orange-600 hover:bg-orange-700 font-bold"
+                                className="w-full h-12 text-base bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 font-semibold shadow-lg shadow-orange-500/20"
                                 onClick={() => handleSearchDoc()}
                                 disabled={isLoading}
                             >
+                                <Search className="w-5 h-5 mr-2" />
                                 BUSCAR DOCUMENTO
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Footer hint */}
+                <p className="text-slate-500 text-xs text-center max-w-xs">
+                    Escanea el código de barras del documento o selecciona uno de la lista
+                </p>
             </div>
         )
     }
@@ -679,15 +863,45 @@ export default function MobileScannerPage() {
                         <CardContent className="p-4 space-y-4">
                             {/* Location Input (Storage Mode) */}
                             {workMode === "storage" && (
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-slate-500 uppercase">
-                                        Lectura código ubicación
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-2">
+                                        <span>📍 Escanear ubicación</span>
+                                        {inputLocation && (
+                                            <span className="text-green-600 font-mono bg-green-50 px-2 py-0.5 rounded text-xs">
+                                                {inputLocation}
+                                            </span>
+                                        )}
                                     </label>
-                                    <div className="flex gap-2">
+
+                                    {/* Zebra Scanner for Location */}
+                                    <div
+                                        className="relative bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 rounded-xl p-3 shadow-lg border border-orange-400/30 cursor-pointer hover:from-orange-400 hover:via-orange-500 hover:to-orange-600 transition-all duration-200"
+                                        onClick={() => toast.info("Escanee la etiqueta de ubicación con el Zebra")}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-white/20 rounded-lg p-2.5 backdrop-blur-sm">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-white">
+                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                                    <circle cx="12" cy="10" r="3" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="text-white font-semibold">Escanear Ubicación</div>
+                                                <div className="text-orange-200 text-xs">Apunte a la etiqueta del rack</div>
+                                            </div>
+                                            <div className="relative">
+                                                <span className="absolute inline-flex h-3 w-3 animate-ping rounded-full bg-green-400 opacity-50"></span>
+                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-white"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Manual Input */}
+                                    <div className="flex gap-2 items-center">
                                         <div className="relative flex-1">
-                                            <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">📍</span>
                                             <Input
-                                                className="pl-10 h-12 text-lg border-orange-200 focus-visible:ring-orange-500"
+                                                className="pl-9 h-10 text-base border-slate-200 focus-visible:ring-orange-500 font-mono bg-slate-50"
                                                 placeholder="Ej: A-01-01-01"
                                                 value={inputLocation}
                                                 onChange={(e) => setInputLocation(e.target.value)}
@@ -696,43 +910,73 @@ export default function MobileScannerPage() {
                                         </div>
                                         <Button
                                             variant="outline"
-                                            className="h-12 w-12 shrink-0 border-slate-300 text-slate-500 hover:text-orange-600 hover:border-orange-600"
-                                            onClick={() => {
-                                                toast.info("Zebra Scanner activo: Presione el gatillo físico")
-                                            }}
-                                            title="Zebra Scanner"
-                                        >
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
-                                                <path d="M3 7V5c0-1.1.9-2 2-2h2" />
-                                                <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
-                                                <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
-                                                <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
-                                                <path d="M7 7h10v10H7z" />
-                                                <path d="M12 17v-6" />
-                                            </svg>
-                                        </Button>
-                                        <Button
-                                            className="h-12 w-12 bg-orange-500 hover:bg-orange-600 shrink-0"
+                                            className="h-10 px-3 shrink-0 border-slate-300 text-slate-600 hover:text-orange-600 hover:border-orange-500 hover:bg-orange-50"
                                             onClick={() => startScanner("location")}
                                             title="Cámara"
                                         >
-                                            <ScanBarcode className="w-6 h-6" />
+                                            <ScanBarcode className="w-5 h-5" />
                                         </Button>
                                     </div>
                                 </div>
                             )}
 
                             {/* Pallet/Item Input */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-slate-500 uppercase">
-                                    {workMode === "validation" ? "Código de producto a validar" : "Código de producto"}
-                                </label>
-                                <div className="flex gap-2">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                        {workMode === "validation" ? "Escanear producto" : "Código de producto"}
+                                    </label>
+                                    {/* Zebra Status Indicator */}
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="relative flex h-2.5 w-2.5">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                                        </span>
+                                        <span className="text-green-600 font-medium">Zebra Activo</span>
+                                    </div>
+                                </div>
+
+                                {/* Zebra Scanner Primary Button */}
+                                <div
+                                    className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl p-4 shadow-lg border border-blue-500/30 cursor-pointer hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 transition-all duration-200"
+                                    onClick={() => toast.info("Escáner Zebra listo - Presione el gatillo del dispositivo")}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        {/* Scanner Icon */}
+                                        <div className="bg-white/20 rounded-lg p-3 backdrop-blur-sm">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-8 h-8 text-white">
+                                                <path d="M3 7V5c0-1.1.9-2 2-2h2" />
+                                                <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
+                                                <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
+                                                <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
+                                                <path d="M7 8h10" />
+                                                <path d="M7 12h10" />
+                                                <path d="M7 16h6" />
+                                            </svg>
+                                        </div>
+                                        {/* Text Content */}
+                                        <div className="flex-1">
+                                            <div className="text-white font-bold text-lg">Escáner Zebra</div>
+                                            <div className="text-blue-200 text-sm">Presione el gatillo para escanear</div>
+                                        </div>
+                                        {/* Active Indicator */}
+                                        <div className="flex flex-col items-center gap-1">
+                                            <div className="relative">
+                                                <span className="absolute inline-flex h-4 w-4 animate-ping rounded-full bg-green-400 opacity-50"></span>
+                                                <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-white"></span>
+                                            </div>
+                                            <span className="text-[10px] text-green-300 font-medium uppercase">Listo</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Alternative Input Methods */}
+                                <div className="flex gap-2 items-center">
                                     <div className="relative flex-1">
-                                        <Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                                        <Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                                         <Input
-                                            className="pl-10 h-12 text-lg border-blue-200 focus-visible:ring-blue-500 font-mono"
-                                            placeholder="Escanear o escribir código..."
+                                            className="pl-9 h-11 text-base border-slate-200 focus-visible:ring-blue-500 font-mono bg-slate-50"
+                                            placeholder="O ingrese código manual..."
                                             value={inputPalet}
                                             onChange={(e) => setInputPalet(e.target.value)}
                                             onKeyDown={(e) => handleInputKeyDown(e, "palet")}
@@ -741,75 +985,156 @@ export default function MobileScannerPage() {
 
                                     <Button
                                         variant="outline"
-                                        className="h-12 w-12 shrink-0 border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-600"
-                                        onClick={() => {
-                                            toast.info("Zebra Scanner activo: Presione el gatillo físico")
-                                        }}
-                                        title="Zebra Scanner"
-                                    >
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
-                                            <path d="M3 7V5c0-1.1.9-2 2-2h2" />
-                                            <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
-                                            <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
-                                            <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
-                                            <path d="M7 7h10v10H7z" />
-                                            <path d="M12 17v-6" />
-                                        </svg>
-                                    </Button>
-
-                                    <Button
-                                        className={cn("h-12 w-12 shrink-0", inputPalet ? "bg-blue-600" : "bg-orange-500")}
+                                        className="h-11 px-3 shrink-0 border-slate-300 text-slate-600 hover:text-blue-600 hover:border-blue-500 hover:bg-blue-50"
                                         onClick={inputPalet && !scannedPaletData ? handleScanPalet : () => startScanner("palet")}
-                                        title="Cámara"
+                                        title={inputPalet ? "Buscar" : "Cámara"}
                                     >
-                                        {inputPalet && !scannedPaletData ? <Search className="w-6 h-6" /> : <ScanBarcode className="w-6 h-6" />}
+                                        {inputPalet && !scannedPaletData ? (
+                                            <Search className="w-5 h-5" />
+                                        ) : (
+                                            <ScanBarcode className="w-5 h-5" />
+                                        )}
                                     </Button>
                                 </div>
                             </div>
 
-                            {/* Scanned Item Details */}
-                            <div className="grid grid-cols-3 gap-2 py-2 bg-slate-50 rounded-lg p-2 border border-slate-100">
-                                <div>
-                                    <div className="text-[10px] text-slate-400 uppercase">Item</div>
-                                    <div className="font-bold text-sm truncate">{scannedPaletData?.itemCode || "-"}</div>
+                            {/* Scanned Item Details - Enhanced Card */}
+                            {scannedPaletData ? (
+                                <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200 shadow-sm space-y-3">
+                                    {/* Product Info Header */}
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <div className="text-xs text-slate-500 uppercase tracking-wide">Producto seleccionado</div>
+                                            <div className="font-bold text-lg text-slate-800">{scannedPaletData.descripcion || scannedPaletData.itemCode}</div>
+                                            <div className="text-sm text-slate-500 font-mono">{scannedPaletData.itemCode}</div>
+                                        </div>
+                                        <div className={cn(
+                                            "px-3 py-1 rounded-full text-xs font-bold uppercase",
+                                            scannedPaletData.estado === "Validado" ? "bg-green-100 text-green-700" :
+                                                scannedPaletData.estado === "Almacenado" ? "bg-blue-100 text-blue-700" :
+                                                    "bg-orange-100 text-orange-700"
+                                        )}>
+                                            {scannedPaletData.estado}
+                                        </div>
+                                    </div>
+
+                                    {/* Progress Section */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-slate-600">Progreso de escaneo</span>
+                                            <span className="font-bold text-slate-800">
+                                                {scanCounts[scannedPaletData.itemCode] || 0} / {scannedPaletData.cantidadEsperada}
+                                            </span>
+                                        </div>
+                                        {/* Progress Bar */}
+                                        <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                                            <div
+                                                className={cn(
+                                                    "h-full rounded-full transition-all duration-300",
+                                                    (scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada
+                                                        ? "bg-gradient-to-r from-green-500 to-green-400"
+                                                        : "bg-gradient-to-r from-blue-500 to-blue-400"
+                                                )}
+                                                style={{
+                                                    width: `${Math.min(100, ((scanCounts[scannedPaletData.itemCode] || 0) / scannedPaletData.cantidadEsperada) * 100)}%`
+                                                }}
+                                            />
+                                        </div>
+                                        {(scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada && (
+                                            <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                <span>Cantidad completa - Listo para validar</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Quick Stats */}
+                                    <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-200">
+                                        <div className="text-center">
+                                            <div className="text-2xl font-bold text-slate-700">{scannedPaletData.cantidadEsperada}</div>
+                                            <div className="text-[10px] text-slate-500 uppercase">Esperado</div>
+                                        </div>
+                                        <div className="text-center border-x border-slate-200">
+                                            <div className="text-2xl font-bold text-blue-600">{scanCounts[scannedPaletData.itemCode] || 0}</div>
+                                            <div className="text-[10px] text-slate-500 uppercase">Escaneado</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className={cn(
+                                                "text-2xl font-bold",
+                                                (scannedPaletData.cantidadEsperada - (scanCounts[scannedPaletData.itemCode] || 0)) <= 0
+                                                    ? "text-green-600" : "text-orange-500"
+                                            )}>
+                                                {Math.max(0, scannedPaletData.cantidadEsperada - (scanCounts[scannedPaletData.itemCode] || 0))}
+                                            </div>
+                                            <div className="text-[10px] text-slate-500 uppercase">Faltante</div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="border-l border-slate-200 pl-2">
-                                    <div className="text-[10px] text-slate-400 uppercase">Cant.</div>
-                                    <div className="font-bold text-sm text-blue-600">{scannedPaletData?.cantidad || "-"}</div>
+                            ) : (
+                                <div className="bg-slate-50 rounded-xl p-6 border border-dashed border-slate-300 text-center">
+                                    <Box className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                                    <div className="text-slate-500 text-sm">Escanee un producto para comenzar</div>
+                                    <div className="text-slate-400 text-xs mt-1">Use el escáner Zebra o la cámara</div>
                                 </div>
-                                <div className="border-l border-slate-200 pl-2">
-                                    <div className="text-[10px] text-slate-400 uppercase">Lote</div>
-                                    <div className="font-bold text-sm">{scannedPaletData?.lote || "-"}</div>
-                                </div>
-                            </div>
+                            )}
 
                             {/* Action Buttons */}
-                            <div className="grid grid-cols-2 gap-3 pt-2">
+                            <div className="space-y-3 pt-2">
                                 {workMode === "validation" ? (
                                     <>
+                                        {/* Validate Button */}
+                                        {scannedPaletData && scannedPaletData.estadoBackend === EstadoDetalle.PENDIENTE && (
+                                            <Button
+                                                className={cn(
+                                                    "w-full h-14 font-bold shadow-lg text-white transition-all",
+                                                    (scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada
+                                                        ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 ring-2 ring-green-300 ring-offset-2 animate-pulse"
+                                                        : "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400"
+                                                )}
+                                                disabled={!inputPalet || processingAction || (scanCounts[scannedPaletData?.itemCode || ""] || 0) === 0}
+                                                onClick={() => {
+                                                    const count = scanCounts[scannedPaletData.itemCode] || 0
+                                                    if (count > 0) {
+                                                        handleValidarProducto(scannedPaletData, count)
+                                                    } else {
+                                                        toast.warning("Escanee al menos un producto primero")
+                                                    }
+                                                }}
+                                            >
+                                                {processingAction ? <Loader2 className="animate-spin" /> : (
+                                                    <div className="flex items-center gap-2">
+                                                        <CheckCircle2 className="w-6 h-6" />
+                                                        <span>VALIDAR ({scanCounts[scannedPaletData?.itemCode || ""] || 0} unidades)</span>
+                                                    </div>
+                                                )}
+                                            </Button>
+                                        )}
+                                        {/* Report Incident Button */}
                                         <Button
-                                            variant="destructive"
-                                            className="h-12 font-bold bg-red-600 hover:bg-red-700 shadow-sm"
+                                            variant="outline"
+                                            className="w-full h-11 font-medium border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
                                             disabled={!inputPalet || processingAction}
                                             onClick={handleReport}
                                         >
-                                            REPORTAR
-                                        </Button>
-                                        <Button
-                                            className="h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
-                                            disabled={!inputPalet || processingAction}
-                                            onClick={handleValidate}
-                                        >
-                                            {processingAction ? <Loader2 className="animate-spin" /> : "CONTAR"}
+                                            <span className="text-red-500">⚠️</span>
+                                            <span className="ml-2">Reportar Incidencia</span>
                                         </Button>
                                     </>
                                 ) : (
                                     <Button
-                                        className="col-span-2 h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
-                                        disabled={!inputPalet || !inputLocation || processingAction}
-                                        onClick={handleStore}
+                                        className="w-full h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
+                                        disabled={!scannedPaletData || !inputLocation || processingAction}
+                                        onClick={() => {
+                                            if (scannedPaletData && inputLocation) {
+                                                handleAlmacenarProducto(scannedPaletData, inputLocation)
+                                            }
+                                        }}
                                     >
-                                        {processingAction ? <Loader2 className="animate-spin" /> : "ALMACENAR"}
+                                        {processingAction ? <Loader2 className="animate-spin" /> : (
+                                            <>
+                                                <Package className="w-5 h-5 mr-2" />
+                                                ALMACENAR EN {inputLocation || "..."}                                            </>
+                                        )}
                                     </Button>
                                 )}
                             </div>

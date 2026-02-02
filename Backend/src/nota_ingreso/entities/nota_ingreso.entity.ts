@@ -4,16 +4,18 @@ import { Almacen } from '../../almacen/entities/almacen.entity';
 
 /**
  * Estados de la orden de ingreso:
- * 0 = PALETIZADO (Recién registrado)
- * 1 = VALIDADO (Operario 1 escaneó y validó)
- * 2 = ALMACENADO (Operario 2 ubicó en almacén - ESTADO FINAL)
+ * 0 = PALETIZADO (Recién registrado, ningún detalle validado)
+ * 1 = VALIDADO (Todos los detalles validados)
+ * 2 = ALMACENADO (Todos los detalles almacenados - ESTADO FINAL)
  * 3 = ANULADO (Cancelado - ESTADO FINAL)
+ * 5 = PARCIAL (Algunos detalles validados/almacenados pero no todos)
  */
 export enum EstadoIngreso {
   PALETIZADO = 0,
   VALIDADO = 1,
   ALMACENADO = 2,
   ANULADO = 3,
+  PARCIAL = 5,
 }
 
 @Entity('nota_ingreso')

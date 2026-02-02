@@ -1,7 +1,4 @@
 {
-  "/almacen/stock/page": "app/almacen/stock/page.js",
-  "/ingresos/nuevo/page": "app/ingresos/nuevo/page.js",
-  "/ingresos/page": "app/ingresos/page.js",
-  "/ingresos/registro/page": "app/ingresos/registro/page.js",
-  "/inventario/gestion/page": "app/inventario/gestion/page.js"
+  "/ingresos/mobile-scanner/page": "app/ingresos/mobile-scanner/page.js",
+  "/page": "app/page.js"
 }
