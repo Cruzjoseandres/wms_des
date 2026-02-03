@@ -724,7 +724,123 @@ async function seed() {
     console.log(`  ✓ Actualizados ${stockActualizaciones.length} items con stock`);
 
     // =======================
-    // 9. RESUMEN FINAL
+    // 9. ÓRDENES DE SALIDA (Simular ERP externo)
+    // =======================
+    console.log('\n📦 [9/11] Creando órdenes de salida (simulando ERP)...');
+
+    const ordenSalidaRepo = dataSource.getRepository('OrdenSalida');
+    const detalleSalidaRepo = dataSource.getRepository('DetalleSalida');
+
+    const ordenesSalidaData = [
+        {
+            nroDocumento: 'OS-2024-001',
+            cliente: 'Farmacia San José',
+            destino: 'Av. Principal 123, Lima',
+            prioridad: 1,
+            estado: 0, // PENDIENTE
+            tipoFuente: 'API_ERP',
+            observacion: 'Entrega urgente - Farmacéuticos',
+            usuarioCreacion: 'API_ERP',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'FARM-001', cantidad: 20 },
+                { codItem: 'FARM-002', cantidad: 15 },
+            ],
+        },
+        {
+            nroDocumento: 'OS-2024-002',
+            cliente: 'TechStore Peru',
+            destino: 'Jr. Comercio 456, Miraflores',
+            prioridad: 2,
+            estado: 0, // PENDIENTE
+            tipoFuente: 'API_ERP',
+            observacion: 'Electrónicos - Cliente VIP',
+            usuarioCreacion: 'API_ERP',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'ELEC-001', cantidad: 50 },
+                { codItem: 'ELEC-002', cantidad: 30 },
+            ],
+        },
+        {
+            nroDocumento: 'OS-2024-003',
+            cliente: 'Restaurante El Buen Sabor',
+            destino: 'Calle Gourmet 789, San Isidro',
+            prioridad: 2,
+            estado: 0, // PENDIENTE
+            tipoFuente: 'API_ERP',
+            observacion: 'Alimentos frescos',
+            usuarioCreacion: 'API_ERP',
+            almacenCodigo: 'ALM-FRIO',
+            detalles: [
+                { codItem: 'ALIM-001', cantidad: 100 },
+                { codItem: 'ALIM-002', cantidad: 50 },
+                { codItem: 'ALIM-004', cantidad: 80 },
+            ],
+        },
+        {
+            nroDocumento: 'OS-2024-004',
+            cliente: 'Constructora ABC',
+            destino: 'Obra Av. Industria 321',
+            prioridad: 3,
+            estado: 0, // PENDIENTE
+            tipoFuente: 'MANUAL',
+            observacion: 'Herramientas para obra',
+            usuarioCreacion: 'admin',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'PROD-001', cantidad: 10 },
+                { codItem: 'PROD-002', cantidad: 5 },
+            ],
+        },
+    ];
+
+    for (const ordenData of ordenesSalidaData) {
+        const existe = await ordenSalidaRepo.findOneBy({ nroDocumento: ordenData.nroDocumento });
+        if (!existe) {
+            const almacen = almacenes[ordenData.almacenCodigo];
+
+            // Crear orden
+            const orden = await ordenSalidaRepo.save({
+                nroDocumento: ordenData.nroDocumento,
+                cliente: ordenData.cliente,
+                destino: ordenData.destino,
+                prioridad: ordenData.prioridad,
+                estado: ordenData.estado,
+                tipoFuente: ordenData.tipoFuente,
+                observacion: ordenData.observacion,
+                usuarioCreacion: ordenData.usuarioCreacion,
+                almacen: almacen,
+            });
+
+            // Crear detalles
+            for (const det of ordenData.detalles) {
+                const item = await itemRepo.findOneBy({ codigo: det.codItem });
+                // Buscar stock disponible
+                const stock = await stockRepo.findOne({
+                    where: { item: { codigo: det.codItem }, estado: 'DISPONIBLE' },
+                    relations: ['item'],
+                });
+
+                await detalleSalidaRepo.save({
+                    codItem: det.codItem,
+                    cantidadSolicitada: det.cantidad,
+                    cantidadPickeada: 0,
+                    ubicacionOrigen: stock?.ubicacion || '',
+                    estado: 0,
+                    ordenSalida: orden,
+                    item: item,
+                    stockInventario: stock,
+                });
+            }
+            console.log(`  ✓ Creada: ${ordenData.nroDocumento} - ${ordenData.cliente} (${ordenData.detalles.length} items)`);
+        } else {
+            console.log(`  → Ya existe: ${ordenData.nroDocumento}`);
+        }
+    }
+
+    // =======================
+    // 10. RESUMEN FINAL
     // =======================
     console.log('\n' + '═'.repeat(50));
     console.log('✅ SEEDERS COMPLETADOS EXITOSAMENTE!');

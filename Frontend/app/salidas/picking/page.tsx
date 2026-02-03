@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { PageHeader } from "@/components/shared/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,158 +10,330 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Package, MapPin, CheckCircle, ScanLine, Play, Pause, Check, Layers } from "lucide-react"
+import { Package, MapPin, CheckCircle, ScanLine, Play, Pause, Check, Layers, Loader2, RefreshCw, ScanBarcode, Camera, Keyboard } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
+import { PickingService } from "@/lib/api/picking.service"
+import {
+  type OrdenSalida,
+  type DetalleSalida,
+  EstadoDetalleSalida,
+  EstadoOrdenSalida
+} from "@/lib/models"
+import { toast } from "sonner"
+import { useScanDetection } from "@/hooks/use-scan-detection"
+import { ScannerModal } from "@/components/scanner/scanner-modal"
 
-interface PickingItem {
-  id: string
-  producto: string
-  descripcion: string
-  cantidad: number
-  cantidadPickeada: number
-  ubicacion: string
-  lote: string
-  estado: "pendiente" | "en_proceso" | "completado"
-}
+// Usuario hardcodeado para demo - en producción vendría de auth
+const CURRENT_USER = "PICKER_DEMO"
 
-interface PedidoPicking {
-  id: string
-  documento: string
-  cliente: string
-  items: PickingItem[]
-  progreso: number
-  estado: "pendiente" | "en_proceso" | "completado"
-}
-
-const mockPedidosPicking: PedidoPicking[] = [
-  {
-    id: "1",
-    documento: "PED-2025-002",
-    cliente: "Distribuidora XYZ",
-    progreso: 0,
-    estado: "pendiente",
-    items: [
-      {
-        id: "1-1",
-        producto: "PRD-001",
-        descripcion: "Producto A",
-        cantidad: 10,
-        cantidadPickeada: 0,
-        ubicacion: "A-01-01-01",
-        lote: "L2025-001",
-        estado: "pendiente",
-      },
-      {
-        id: "1-2",
-        producto: "PRD-002",
-        descripcion: "Producto B",
-        cantidad: 5,
-        cantidadPickeada: 0,
-        ubicacion: "A-01-01-02",
-        lote: "L2025-002",
-        estado: "pendiente",
-      },
-      {
-        id: "1-3",
-        producto: "PRD-003",
-        descripcion: "Producto C",
-        cantidad: 8,
-        cantidadPickeada: 0,
-        ubicacion: "B-02-01-01",
-        lote: "L2025-003",
-        estado: "pendiente",
-      },
-    ],
-  },
-  {
-    id: "2",
-    documento: "PED-2025-003",
-    cliente: "Comercial Norte",
-    progreso: 60,
-    estado: "en_proceso",
-    items: [
-      {
-        id: "2-1",
-        producto: "PRD-001",
-        descripcion: "Producto A",
-        cantidad: 15,
-        cantidadPickeada: 15,
-        ubicacion: "A-01-01-01",
-        lote: "L2025-001",
-        estado: "completado",
-      },
-      {
-        id: "2-2",
-        producto: "PRD-004",
-        descripcion: "Producto D",
-        cantidad: 20,
-        cantidadPickeada: 12,
-        ubicacion: "C-01-01-01",
-        lote: "L2025-004",
-        estado: "en_proceso",
-      },
-    ],
-  },
-]
+type ScanMode = "zebra" | "camera" | "manual"
 
 export default function PickingPage() {
-  const [pedidos, setPedidos] = useState<PedidoPicking[]>(mockPedidosPicking)
-  const [selectedPedido, setSelectedPedido] = useState<PedidoPicking | null>(null)
+  const [ordenes, setOrdenes] = useState<OrdenSalida[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedOrden, setSelectedOrden] = useState<OrdenSalida | null>(null)
   const [scanInput, setScanInput] = useState("")
   const [activeTab, setActiveTab] = useState("individual")
+  const [processing, setProcessing] = useState(false)
+  const [scanMode, setScanMode] = useState<ScanMode>("zebra")
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false)
+  const [zebraConnected, setZebraConnected] = useState(false)
+  const [lastScan, setLastScan] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleIniciarPicking = (pedido: PedidoPicking) => {
-    setPedidos(pedidos.map((p) => (p.id === pedido.id ? { ...p, estado: "en_proceso" } : p)))
-    setSelectedPedido(pedido)
-  }
+  // Estado local para tracking de picking incremental
+  // Key: detalleId, Value: cantidadPickeadaLocal
+  const [localPickingProgress, setLocalPickingProgress] = useState<Record<number, number>>({})
 
-  const handleScan = () => {
-    if (selectedPedido && scanInput) {
-      // Simulate scanning
-      const updatedItems = selectedPedido.items.map((item) => {
-        if (item.ubicacion === scanInput || item.producto === scanInput) {
-          return { ...item, cantidadPickeada: item.cantidad, estado: "completado" as const }
-        }
-        return item
-      })
-
-      const completados = updatedItems.filter((i) => i.estado === "completado").length
-      const progreso = Math.round((completados / updatedItems.length) * 100)
-
-      const updatedPedido = {
-        ...selectedPedido,
-        items: updatedItems,
-        progreso,
-        estado: progreso === 100 ? ("completado" as const) : ("en_proceso" as const),
+  // Hook para detección de escáner Zebra
+  useScanDetection({
+    onComplete: async (code: string) => {
+      if (selectedOrden && scanMode === "zebra") {
+        console.log("[Zebra] Código escaneado:", code)
+        setLastScan(code)
+        setZebraConnected(true)
+        await processScannedCode(code)
       }
+    },
+    minLength: 3,
+  })
 
-      setPedidos(pedidos.map((p) => (p.id === selectedPedido.id ? updatedPedido : p)))
-      setSelectedPedido(updatedPedido)
-      setScanInput("")
+  // Cargar órdenes pendientes para picking
+  const loadOrdenes = async () => {
+    try {
+      setLoading(true)
+      const data = await PickingService.getOrdenesPendientes()
+      setOrdenes(data)
+
+      // Si hay una orden seleccionada, actualizarla
+      if (selectedOrden) {
+        const updated = data.find(o => o.id === selectedOrden.id)
+        if (updated) {
+          setSelectedOrden(updated)
+        } else {
+          setSelectedOrden(null)
+        }
+      }
+    } catch (error) {
+      console.error("Error cargando órdenes:", error)
+      toast.error("Error al cargar órdenes para picking")
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleFinalizarPicking = () => {
-    if (selectedPedido) {
-      setPedidos(
-        pedidos.map((p) =>
-          p.id === selectedPedido.id
-            ? {
-                ...p,
-                estado: "completado",
-                progreso: 100,
-                items: p.items.map((i) => ({ ...i, estado: "completado" as const, cantidadPickeada: i.cantidad })),
-              }
-            : p,
-        ),
-      )
-      setSelectedPedido(null)
+  useEffect(() => {
+    loadOrdenes()
+  }, [])
+
+  // Efecto para mantener foco en el input cuando hay orden seleccionada
+  useEffect(() => {
+    if (selectedOrden && scanMode === "manual" && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [selectedOrden, scanMode])
+
+  const getProgreso = (orden: OrdenSalida) => {
+    if (!orden.detalles || orden.detalles.length === 0) return 0
+    const pickeados = orden.detalles.filter(d => d.estado === EstadoDetalleSalida.PICKEADO).length
+    return Math.round((pickeados / orden.detalles.length) * 100)
+  }
+
+  const getEstadoLabel = (orden: OrdenSalida) => {
+    if (orden.estado === EstadoOrdenSalida.COMPLETADA) return "Completado"
+    if (orden.estado === EstadoOrdenSalida.EN_PICKING) return "En Proceso"
+    return "Pendiente"
+  }
+
+  const getEstadoColor = (orden: OrdenSalida) => {
+    if (orden.estado === EstadoOrdenSalida.COMPLETADA) return "bg-green-600"
+    if (orden.estado === EstadoOrdenSalida.EN_PICKING) return "bg-blue-600"
+    return "bg-yellow-600"
+  }
+
+  const handleIniciarPicking = async (orden: OrdenSalida) => {
+    try {
+      setProcessing(true)
+      await PickingService.iniciarOrden(orden.id, CURRENT_USER)
+      toast.success(`Picking iniciado para ${orden.nroDocumento}`)
+      await loadOrdenes()
+      // Actualizar la orden seleccionada con los datos frescos
+      const updated = await PickingService.getOrdenesPendientes()
+      const ordenActualizada = updated.find(o => o.id === orden.id)
+      if (ordenActualizada) {
+        setSelectedOrden(ordenActualizada)
+      }
+    } catch (error) {
+      console.error("Error iniciando picking:", error)
+      toast.error(error instanceof Error ? error.message : "Error al iniciar picking")
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  // Obtener cantidad pickeada (local + backend)
+  const getCantidadPickeada = (detalle: DetalleSalida): number => {
+    const backendCantidad = detalle.cantidadPickeada || 0
+    const localCantidad = localPickingProgress[detalle.id] || 0
+    return backendCantidad + localCantidad
+  }
+
+  // Verificar si un detalle está completo
+  const isDetalleCompleto = (detalle: DetalleSalida): boolean => {
+    return getCantidadPickeada(detalle) >= detalle.cantidadSolicitada ||
+      detalle.estado === EstadoDetalleSalida.PICKEADO
+  }
+
+  // Función central para procesar el código escaneado
+  const processScannedCode = async (code: string) => {
+    if (!selectedOrden || !code.trim()) return
+
+    // Buscar el detalle que coincide con el código escaneado
+    const detalle = selectedOrden.detalles.find(d =>
+      d.codItem.toLowerCase() === code.toLowerCase() ||
+      d.ubicacionOrigen?.toLowerCase() === code.toLowerCase() ||
+      d.item?.codigoBarra?.toLowerCase() === code.toLowerCase()
+    )
+
+    if (!detalle) {
+      toast.error("Código no encontrado en esta orden")
+      return
+    }
+
+    // Calcular la cantidad actual (backend + local)
+    const cantidadTotal = getCantidadPickeada(detalle)
+    const cantidadFaltante = detalle.cantidadSolicitada - cantidadTotal
+
+    if (cantidadFaltante <= 0 || detalle.estado === EstadoDetalleSalida.PICKEADO) {
+      toast.warning("Este item ya fue pickeado completamente")
+      return
+    }
+
+    // Incrementar contador local
+    const nuevaCantidadLocal = (localPickingProgress[detalle.id] || 0) + 1
+    const nuevaCantidadTotal = (detalle.cantidadPickeada || 0) + nuevaCantidadLocal
+
+    // Actualizar estado local inmediatamente
+    setLocalPickingProgress(prev => ({
+      ...prev,
+      [detalle.id]: nuevaCantidadLocal
+    }))
+
+    // Mostrar progreso
+    if (nuevaCantidadTotal < detalle.cantidadSolicitada) {
+      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
+    } else {
+      // Cantidad completa - enviar al backend
+      try {
+        setProcessing(true)
+
+        // Si es el primer escaneo (sin cantidad backend), iniciar tiempo
+        if ((detalle.cantidadPickeada || 0) === 0) {
+          await PickingService.iniciarDetalle(detalle.id, CURRENT_USER)
+        }
+
+        // Enviar cantidad total al backend
+        await PickingService.pickearDetalle(detalle.id, nuevaCantidadTotal, CURRENT_USER)
+
+        toast.success(`✓ ${detalle.codItem} completado (${nuevaCantidadTotal}/${detalle.cantidadSolicitada})`)
+
+        // Limpiar progreso local para este detalle
+        setLocalPickingProgress(prev => {
+          const { [detalle.id]: _, ...rest } = prev
+          return rest
+        })
+
+        await loadOrdenes()
+      } catch (error) {
+        console.error("Error pickeando detalle:", error)
+        toast.error(error instanceof Error ? error.message : "Error al pickear item")
+        // Revertir incremento local en caso de error
+        setLocalPickingProgress(prev => ({
+          ...prev,
+          [detalle.id]: (prev[detalle.id] || 1) - 1
+        }))
+      } finally {
+        setProcessing(false)
+      }
+    }
+
+    setScanInput("")
+  }
+
+
+  const handleScan = async () => {
+    await processScannedCode(scanInput)
+  }
+
+  // Callback del modal de cámara
+  const handleCameraScan = async (code: string) => {
+    setIsScannerModalOpen(false)
+    await processScannedCode(code)
+  }
+
+  const handlePickearDirecto = async (detalle: DetalleSalida) => {
+    if (!selectedOrden) return
+
+    // Calcular la cantidad actual (backend + local)
+    const cantidadTotal = getCantidadPickeada(detalle)
+    const cantidadFaltante = detalle.cantidadSolicitada - cantidadTotal
+
+    if (cantidadFaltante <= 0 || detalle.estado === EstadoDetalleSalida.PICKEADO) {
+      toast.warning("Este item ya fue pickeado completamente")
+      return
+    }
+
+    // Incrementar contador local
+    const nuevaCantidadLocal = (localPickingProgress[detalle.id] || 0) + 1
+    const nuevaCantidadTotal = (detalle.cantidadPickeada || 0) + nuevaCantidadLocal
+
+    // Actualizar estado local inmediatamente
+    setLocalPickingProgress(prev => ({
+      ...prev,
+      [detalle.id]: nuevaCantidadLocal
+    }))
+
+    // Mostrar progreso
+    if (nuevaCantidadTotal < detalle.cantidadSolicitada) {
+      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
+    } else {
+      // Cantidad completa - enviar al backend
+      try {
+        setProcessing(true)
+
+        // Si es el primer escaneo (sin cantidad backend), iniciar tiempo
+        if ((detalle.cantidadPickeada || 0) === 0) {
+          await PickingService.iniciarDetalle(detalle.id, CURRENT_USER)
+        }
+
+        // Enviar cantidad total al backend
+        await PickingService.pickearDetalle(detalle.id, nuevaCantidadTotal, CURRENT_USER)
+
+        toast.success(`✓ ${detalle.codItem} completado (${nuevaCantidadTotal}/${detalle.cantidadSolicitada})`)
+
+        // Limpiar progreso local para este detalle
+        setLocalPickingProgress(prev => {
+          const { [detalle.id]: _, ...rest } = prev
+          return rest
+        })
+
+        await loadOrdenes()
+      } catch (error) {
+        console.error("Error pickeando detalle:", error)
+        toast.error(error instanceof Error ? error.message : "Error al pickear item")
+        // Revertir incremento local en caso de error
+        setLocalPickingProgress(prev => ({
+          ...prev,
+          [detalle.id]: (prev[detalle.id] || 1) - 1
+        }))
+      } finally {
+        setProcessing(false)
+      }
+    }
+  }
+
+
+
+  const handleFinalizarPicking = async () => {
+    if (!selectedOrden) return
+
+    try {
+      setProcessing(true)
+      await PickingService.completarOrden(selectedOrden.id, CURRENT_USER)
+      toast.success(`Picking completado para ${selectedOrden.nroDocumento}`)
+      setSelectedOrden(null)
+      await loadOrdenes()
+    } catch (error) {
+      console.error("Error finalizando picking:", error)
+      toast.error(error instanceof Error ? error.message : "Error al finalizar picking")
+    } finally {
+      setProcessing(false)
     }
   }
 
   return (
     <MainLayout>
-      <PageHeader title="Picking de Pedidos" description="Preparación de pedidos para despacho" />
+      <PageHeader
+        title="Picking de Pedidos"
+        description="Preparación de pedidos para despacho"
+      >
+        <div className="flex items-center gap-2">
+          {/* Indicador de estado Zebra */}
+          <Badge className={zebraConnected ? "bg-green-600" : "bg-gray-600"}>
+            <ScanBarcode className="w-3 h-3 mr-1" />
+            {zebraConnected ? "Conectado" : "Zebra"}
+          </Badge>
+          <Button
+            variant="outline"
+            className="bg-secondary border-border"
+            onClick={loadOrdenes}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+        </div>
+      </PageHeader>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-secondary">
@@ -177,113 +349,202 @@ export default function PickingPage() {
 
         <TabsContent value="individual" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Pedidos List */}
+            {/* Órdenes List */}
             <div className="lg:col-span-1">
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-lg">Pedidos para Picking</CardTitle>
+                  <CardTitle className="text-lg">Órdenes para Picking</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {pedidos.map((pedido) => (
-                    <div
-                      key={pedido.id}
-                      className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                        selectedPedido?.id === pedido.id
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                  ) : ordenes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No hay órdenes pendientes</p>
+                    </div>
+                  ) : (
+                    ordenes.map((orden) => (
+                      <div
+                        key={orden.id}
+                        className={`p-4 rounded-lg border cursor-pointer transition-colors ${selectedOrden?.id === orden.id
                           ? "border-primary bg-primary/10"
                           : "border-border bg-secondary/50 hover:bg-secondary"
-                      }`}
-                      onClick={() => setSelectedPedido(pedido)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{pedido.documento}</span>
-                        <Badge
-                          className={
-                            pedido.estado === "completado"
-                              ? "bg-green-600"
-                              : pedido.estado === "en_proceso"
-                                ? "bg-blue-600"
-                                : "bg-yellow-600"
-                          }
-                        >
-                          {pedido.estado === "completado"
-                            ? "Completado"
-                            : pedido.estado === "en_proceso"
-                              ? "En Proceso"
-                              : "Pendiente"}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">{pedido.cliente}</p>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span>{pedido.items.length} items</span>
-                          <span>{pedido.progreso}%</span>
+                          }`}
+                        onClick={() => setSelectedOrden(orden)}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">{orden.nroDocumento}</span>
+                          <Badge className={getEstadoColor(orden)}>
+                            {getEstadoLabel(orden)}
+                          </Badge>
                         </div>
-                        <Progress value={pedido.progreso} className="h-2" />
+                        <p className="text-sm text-muted-foreground mb-2">{orden.cliente}</p>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span>{orden.detalles?.length || 0} items</span>
+                            <span>{getProgreso(orden)}%</span>
+                          </div>
+                          <Progress value={getProgreso(orden)} className="h-2" />
+                        </div>
+                        {orden.estado === EstadoOrdenSalida.PENDIENTE && (
+                          <Button
+                            size="sm"
+                            className="w-full mt-3 bg-primary text-primary-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleIniciarPicking(orden)
+                            }}
+                            disabled={processing}
+                          >
+                            {processing ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Play className="w-4 h-4 mr-1" />
+                            )}
+                            Iniciar Picking
+                          </Button>
+                        )}
                       </div>
-                      {pedido.estado === "pendiente" && (
-                        <Button
-                          size="sm"
-                          className="w-full mt-3 bg-primary text-primary-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleIniciarPicking(pedido)
-                          }}
-                        >
-                          <Play className="w-4 h-4 mr-1" /> Iniciar Picking
-                        </Button>
-                      )}
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>
 
             {/* Picking Detail */}
             <div className="lg:col-span-2">
-              {selectedPedido ? (
+              {selectedOrden ? (
                 <Card className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="flex items-center gap-2">
                           <Package className="w-5 h-5 text-primary" />
-                          {selectedPedido.documento}
+                          {selectedOrden.nroDocumento}
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">{selectedPedido.cliente}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{selectedOrden.cliente}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge
-                          className={
-                            selectedPedido.estado === "completado"
-                              ? "bg-green-600"
-                              : selectedPedido.estado === "en_proceso"
-                                ? "bg-blue-600"
-                                : "bg-yellow-600"
-                          }
-                        >
-                          {selectedPedido.progreso}% Completado
+                        <Badge className={getEstadoColor(selectedOrden)}>
+                          {getProgreso(selectedOrden)}% Completado
                         </Badge>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Scanner */}
-                    {selectedPedido.estado !== "completado" && (
-                      <div className="p-4 bg-secondary/50 rounded-lg">
-                        <Label className="flex items-center gap-2 mb-2">
-                          <ScanLine className="w-4 h-4 text-primary" />
-                          Escanear Ubicación / Producto
-                        </Label>
+                    {/* Scanner Section */}
+                    {selectedOrden.estado !== EstadoOrdenSalida.COMPLETADA && (
+                      <div className="p-4 bg-secondary/50 rounded-lg border border-border">
+                        {/* Selector de modo de escaneo */}
+                        <div className="flex items-center justify-between mb-3">
+                          <Label className="flex items-center gap-2">
+                            <ScanLine className="w-4 h-4 text-primary" />
+                            Modo de Escaneo
+                          </Label>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant={scanMode === "zebra" ? "default" : "outline"}
+                              onClick={() => setScanMode("zebra")}
+                              className={`h-8 ${scanMode === "zebra" ? "bg-primary" : "bg-secondary"}`}
+                            >
+                              <ScanBarcode className="w-4 h-4 mr-1" />
+                              Zebra
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={scanMode === "camera" ? "default" : "outline"}
+                              onClick={() => {
+                                setScanMode("camera")
+                                setIsScannerModalOpen(true)
+                              }}
+                              className={`h-8 ${scanMode === "camera" ? "bg-primary" : "bg-secondary"}`}
+                            >
+                              <Camera className="w-4 h-4 mr-1" />
+                              Cámara
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={scanMode === "manual" ? "default" : "outline"}
+                              onClick={() => setScanMode("manual")}
+                              className={`h-8 ${scanMode === "manual" ? "bg-primary" : "bg-secondary"}`}
+                            >
+                              <Keyboard className="w-4 h-4 mr-1" />
+                              Manual
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Información del modo actual */}
+                        {scanMode === "zebra" && (
+                          <div className="p-3 bg-blue-600/20 rounded-lg border border-blue-600/50 mb-3">
+                            <div className="flex items-center gap-2">
+                              <ScanBarcode className="w-5 h-5 text-blue-400" />
+                              <div>
+                                <p className="text-sm font-medium text-blue-400">Escáner Zebra Activo</p>
+                                <p className="text-xs text-blue-400/70">
+                                  Escanea cualquier código de producto o ubicación
+                                </p>
+                              </div>
+                            </div>
+                            {lastScan && (
+                              <div className="mt-2 p-2 bg-black/20 rounded">
+                                <span className="text-xs text-muted-foreground">Último escaneo: </span>
+                                <span className="text-sm font-mono text-green-400">{lastScan}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {scanMode === "camera" && (
+                          <div className="p-3 bg-purple-600/20 rounded-lg border border-purple-600/50 mb-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Camera className="w-5 h-5 text-purple-400" />
+                                <div>
+                                  <p className="text-sm font-medium text-purple-400">Cámara del dispositivo</p>
+                                  <p className="text-xs text-purple-400/70">
+                                    Usa la cámara para escanear códigos
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={() => setIsScannerModalOpen(true)}
+                                className="bg-purple-600 hover:bg-purple-700"
+                              >
+                                Abrir Cámara
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Input siempre visible para todos los modos */}
                         <div className="flex gap-2">
                           <Input
-                            placeholder="Escanee o ingrese código..."
+                            ref={inputRef}
+                            placeholder={
+                              scanMode === "zebra"
+                                ? "Escanea con Zebra o escribe aquí..."
+                                : scanMode === "camera"
+                                  ? "Usa cámara o escribe aquí..."
+                                  : "Ingrese código de producto o ubicación..."
+                            }
                             value={scanInput}
                             onChange={(e) => setScanInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleScan()}
                             className="bg-secondary border-border"
+                            disabled={processing}
                           />
-                          <Button onClick={handleScan} className="bg-primary text-primary-foreground">
-                            Confirmar
+                          <Button
+                            onClick={handleScan}
+                            className="bg-primary text-primary-foreground"
+                            disabled={processing || !scanInput.trim()}
+                          >
+                            {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar"}
                           </Button>
                         </div>
                       </div>
@@ -296,48 +557,76 @@ export default function PickingPage() {
                           <TableRow className="bg-secondary hover:bg-secondary">
                             <TableHead>Producto</TableHead>
                             <TableHead>Ubicación</TableHead>
-                            <TableHead>Lote</TableHead>
                             <TableHead className="text-center">Cantidad</TableHead>
                             <TableHead className="text-center">Pickeado</TableHead>
                             <TableHead>Estado</TableHead>
+                            <TableHead className="w-20">Acción</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {selectedPedido.items.map((item) => (
-                            <TableRow key={item.id} className={item.estado === "completado" ? "bg-green-600/10" : ""}>
+                          {selectedOrden.detalles?.map((detalle) => (
+                            <TableRow
+                              key={detalle.id}
+                              className={detalle.estado === EstadoDetalleSalida.PICKEADO ? "bg-green-600/10" : ""}
+                            >
                               <TableCell>
                                 <div>
-                                  <p className="font-medium">{item.producto}</p>
-                                  <p className="text-xs text-muted-foreground">{item.descripcion}</p>
+                                  <p className="font-medium">{detalle.codItem}</p>
+                                  <p className="text-xs text-muted-foreground">{detalle.item?.descripcion || "-"}</p>
+                                  {detalle.item?.codigoBarra && (
+                                    <p className="text-xs text-muted-foreground font-mono">
+                                      {detalle.item.codigoBarra}
+                                    </p>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline" className="font-mono">
                                   <MapPin className="w-3 h-3 mr-1" />
-                                  {item.ubicacion}
+                                  {detalle.ubicacionOrigen || "N/A"}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="font-mono text-sm">{item.lote}</TableCell>
-                              <TableCell className="text-center font-bold">{item.cantidad}</TableCell>
+                              <TableCell className="text-center font-bold">{detalle.cantidadSolicitada}</TableCell>
                               <TableCell className="text-center">
                                 <span
                                   className={
-                                    item.cantidadPickeada === item.cantidad ? "text-green-400" : "text-yellow-400"
+                                    isDetalleCompleto(detalle)
+                                      ? "text-green-400"
+                                      : (localPickingProgress[detalle.id] || 0) > 0
+                                        ? "text-blue-400"
+                                        : "text-yellow-400"
                                   }
                                 >
-                                  {item.cantidadPickeada}
+                                  {Math.round(getCantidadPickeada(detalle))}
                                 </span>
                               </TableCell>
                               <TableCell>
-                                {item.estado === "completado" ? (
+                                {isDetalleCompleto(detalle) ? (
                                   <Badge className="bg-green-600">
                                     <CheckCircle className="w-3 h-3 mr-1" />
                                     OK
                                   </Badge>
-                                ) : item.estado === "en_proceso" ? (
-                                  <Badge className="bg-blue-600">En proceso</Badge>
+                                ) : (localPickingProgress[detalle.id] || 0) > 0 ? (
+                                  <Badge className="bg-blue-600">En Progreso</Badge>
                                 ) : (
                                   <Badge className="bg-yellow-600">Pendiente</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {!isDetalleCompleto(detalle) && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    onClick={() => handlePickearDirecto(detalle)}
+                                    disabled={processing}
+                                  >
+                                    {processing ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Check className="w-3 h-3" />
+                                    )}
+                                  </Button>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -347,14 +636,22 @@ export default function PickingPage() {
                     </div>
 
                     {/* Actions */}
-                    {selectedPedido.estado !== "completado" && (
+                    {selectedOrden.estado !== EstadoOrdenSalida.COMPLETADA && (
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" className="bg-secondary border-border">
                           <Pause className="w-4 h-4 mr-2" />
                           Pausar
                         </Button>
-                        <Button onClick={handleFinalizarPicking} className="bg-green-600 hover:bg-green-700">
-                          <Check className="w-4 h-4 mr-2" />
+                        <Button
+                          onClick={handleFinalizarPicking}
+                          className="bg-green-600 hover:bg-green-700"
+                          disabled={processing}
+                        >
+                          {processing ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Check className="w-4 h-4 mr-2" />
+                          )}
                           Finalizar Picking
                         </Button>
                       </div>
@@ -365,7 +662,7 @@ export default function PickingPage() {
                 <Card className="bg-card border-border">
                   <CardContent className="py-12 text-center text-muted-foreground">
                     <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p>Seleccione un pedido para iniciar el picking</p>
+                    <p>Seleccione una orden para iniciar el picking</p>
                   </CardContent>
                 </Card>
               )}
@@ -386,6 +683,13 @@ export default function PickingPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Scanner Modal para cámara */}
+      <ScannerModal
+        open={isScannerModalOpen}
+        onOpenChange={setIsScannerModalOpen}
+        onScanSuccess={handleCameraScan}
+      />
     </MainLayout>
   )
 }

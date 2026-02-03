@@ -9,6 +9,8 @@ import { ItemDocumentoOrigen } from '../item_documento_origen/entities/item_docu
 import { StockInventario } from '../stock_inventario/entities/stock_inventario.entity';
 import { HistorialEstado } from '../historial_estado/entities/historial_estado.entity';
 import { Proveedor } from '../proveedor/entities/proveedor.entity';
+import { OrdenSalida } from '../orden_salida/entities/orden_salida.entity';
+import { DetalleSalida } from '../detalle_salida/entities/detalle_salida.entity';
 import 'dotenv/config';
 
 export const typeOrmConfig: TypeOrmModuleOptions = {
@@ -29,6 +31,8 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
     StockInventario,
     HistorialEstado,
     Proveedor,
+    OrdenSalida,
+    DetalleSalida,
   ],
   synchronize: process.env.DB_SYNCHRONIZE === 'true',
   ssl: process.env.DB_SSL === 'true' ? {

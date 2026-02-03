@@ -23,4 +23,8 @@ export const API_ENDPOINTS = {
 
     // Búsqueda de documentos externos
     documentosExternos: `${API_BASE_URL}/documentos-externos`,
+
+    // Salida y Picking
+    salida: `${API_BASE_URL}/api/salida`,
+    picking: `${API_BASE_URL}/api/picking`,
 };

@@ -23,7 +23,7 @@ interface IngresoRow {
   fechaFin: string
   items: number
   estado: string
-  observaciones: string
+  observaciones: string | null
 }
 
 const tipoLabels: Record<string, string> = {
@@ -91,7 +91,7 @@ export default function RegistroIngresoPage() {
     {
       key: "estado",
       label: "Estado",
-      render: (item: IngresoRow) => <Badge className={estadoColors[item.estado] || "bg-gray-600"}>{item.estado.toUpperCase()}</Badge>,
+      render: (item: IngresoRow) => <Badge className={estadoColors[item.estado] || "bg-gray-600"}>{(item.estado || "DESCONOCIDO").toUpperCase()}</Badge>,
     },
     {
       key: "acciones",

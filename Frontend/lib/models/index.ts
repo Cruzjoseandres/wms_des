@@ -59,3 +59,22 @@ export type {
     TipoFuenteDocumento,
     DocumentoExterno,
 } from './documento-externo.model';
+
+// Salida y Picking
+export {
+    EstadoOrdenSalida,
+    EstadoOrdenSalidaNombre,
+    EstadoDetalleSalida,
+    EstadoDetalleSalidaNombre,
+} from './salida.model';
+export type {
+    DetalleSalida,
+    ResumenOrdenSalida,
+    OrdenSalida,
+    CreateOrdenSalidaPayload,
+    ImportarERPPayload,
+    IniciarPickingOrdenResponse,
+    PickearDetalleResponse,
+    CompletarPickingResponse,
+    MetricasPicker,
+} from './salida.model';
