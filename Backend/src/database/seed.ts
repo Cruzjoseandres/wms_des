@@ -511,6 +511,67 @@ async function seed() {
                 { codItem: 'FARM-001', cantidad: 10, cantidadEsperada: 10, lote: 'STOCK-L001', fechaVencimiento: new Date('2027-12-31'), ubicacionFinal: 'Z-99-01-01' },
             ],
         },
+        // ===== 5 NOTAS SIMPLES CON PRODUCTOS PLASTICOS =====
+        {
+            nroDocumento: 'PTEST-001',
+            origen: 'Test Plasticos',
+            estado: 0, // PALETIZADO
+            observacion: 'Prueba plasticos - Bolsa y Vaso',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'PLAST-001', cantidad: 5, cantidadEsperada: 5, lote: 'PT-001' },
+                { codItem: 'PLAST-002', cantidad: 3, cantidadEsperada: 3, lote: 'PT-002' },
+            ],
+        },
+        {
+            nroDocumento: 'PTEST-002',
+            origen: 'Test Plasticos',
+            estado: 0, // PALETIZADO
+            observacion: 'Prueba plasticos - Plato solo',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'PLAST-003', cantidad: 2, cantidadEsperada: 2, lote: 'PT-003' },
+            ],
+        },
+        {
+            nroDocumento: 'PTEST-003',
+            origen: 'Test Plasticos',
+            estado: 0, // PALETIZADO
+            observacion: 'Prueba plasticos - Cubiertos',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'PLAST-004', cantidad: 4, cantidadEsperada: 4, lote: 'PT-004' },
+                { codItem: 'PLAST-005', cantidad: 3, cantidadEsperada: 3, lote: 'PT-005' },
+                { codItem: 'PLAST-006', cantidad: 2, cantidadEsperada: 2, lote: 'PT-006' },
+            ],
+        },
+        {
+            nroDocumento: 'PTEST-004',
+            origen: 'Test Plasticos',
+            estado: 0, // PALETIZADO
+            observacion: 'Prueba plasticos - Tapa y Contenedor',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'PLAST-007', cantidad: 6, cantidadEsperada: 6, lote: 'PT-007' },
+                { codItem: 'PLAST-008', cantidad: 4, cantidadEsperada: 4, lote: 'PT-008' },
+            ],
+        },
+        {
+            nroDocumento: 'PTEST-005',
+            origen: 'Test Plasticos',
+            estado: 0, // PALETIZADO
+            observacion: 'Prueba plasticos - Botella y Embalaje',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'PLAST-009', cantidad: 3, cantidadEsperada: 3, lote: 'PT-009' },
+                { codItem: 'PLAST-010', cantidad: 2, cantidadEsperada: 2, lote: 'PT-010' },
+            ],
+        },
     ];
 
     const notasCreadas: Record<string, NotaIngreso> = {};

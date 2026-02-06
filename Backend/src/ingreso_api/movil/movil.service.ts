@@ -434,12 +434,31 @@ export class MovilService {
 
         // Registrar en stock_inventario
         const cantidadStock = Number(detalle.cantidadRecibida || detalle.cantidad);
+        console.log('[almacenarDetalle] Debug:', {
+            detalleId,
+            codItem: detalle.codItem,
+            cantidadStock,
+            itemLoaded: !!detalle.item,
+            itemId: detalle.item?.id,
+            itemCodigo: detalle.item?.codigo,
+        });
+
         if (cantidadStock > 0 && detalle.item) {
-            await this.stockInventarioService.agregarStock({
+            const stockResult = await this.stockInventarioService.agregarStock({
                 item: detalle.item,
                 ubicacion: ubicacion,
                 cantidad: cantidadStock,
                 detalleIngreso: detalle,
+            });
+            console.log('[almacenarDetalle] Stock agregado:', {
+                stockId: stockResult.id,
+                cantidad: stockResult.cantidad,
+                ubicacion: stockResult.ubicacion,
+            });
+        } else {
+            console.warn('[almacenarDetalle] NO se agregó stock:', {
+                razon: !detalle.item ? 'item no cargado' : 'cantidad <= 0',
+                cantidadStock,
             });
         }
 
