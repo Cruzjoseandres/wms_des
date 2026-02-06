@@ -152,12 +152,36 @@ export class PickingService {
         }
         await this.detalleRepo.save(detalle);
 
-        // Reducir stock
-        if (detalle.stockInventario && cantidadPickeada > 0) {
-            const nuevoStock = Number(detalle.stockInventario.cantidad) - cantidadPickeada;
-            detalle.stockInventario.cantidad = Math.max(0, nuevoStock);
-            detalle.stockInventario.ultimoMovimiento = ahora;
-            await this.stockRepo.save(detalle.stockInventario);
+        // Reducir stock - buscar por item + ubicación
+        if (cantidadPickeada > 0 && detalle.item) {
+            // Buscar stock en la ubicación de origen
+            const stock = await this.stockRepo.findOne({
+                where: {
+                    item: { id: detalle.item.id },
+                    ubicacion: detalle.ubicacionOrigen || undefined,
+                },
+            });
+
+            if (stock) {
+                const nuevoStock = Number(stock.cantidad) - cantidadPickeada;
+                stock.cantidad = Math.max(0, nuevoStock);
+                stock.ultimoMovimiento = ahora;
+                await this.stockRepo.save(stock);
+                console.log(`[Picking] Stock reducido: ${detalle.codItem} en ${detalle.ubicacionOrigen} → ${stock.cantidad}`);
+            } else {
+                // Si no hay ubicación específica, buscar cualquier stock del item
+                const stockGeneral = await this.stockRepo.findOne({
+                    where: { item: { id: detalle.item.id } },
+                    order: { cantidad: 'DESC' },
+                });
+                if (stockGeneral) {
+                    const nuevoStock = Number(stockGeneral.cantidad) - cantidadPickeada;
+                    stockGeneral.cantidad = Math.max(0, nuevoStock);
+                    stockGeneral.ultimoMovimiento = ahora;
+                    await this.stockRepo.save(stockGeneral);
+                    console.log(`[Picking] Stock general reducido: ${detalle.codItem} → ${stockGeneral.cantidad}`);
+                }
+            }
         }
 
         // Verificar si la orden está completa
@@ -188,7 +212,7 @@ export class PickingService {
     async completarOrden(ordenId: number, usuario: string) {
         const orden = await this.ordenRepo.findOne({
             where: { id: ordenId },
-            relations: ['detalles'],
+            relations: ['detalles', 'detalles.item', 'almacen'],
         });
 
         if (!orden) {
@@ -204,6 +228,47 @@ export class PickingService {
         orden.pickingCompletedAt = new Date();
         await this.ordenRepo.save(orden);
 
+        // Calcular tiempo total de picking
+        let tiempoTotalSegundos = 0;
+        if (orden.pickingStartedAt && orden.pickingCompletedAt) {
+            tiempoTotalSegundos = Math.floor(
+                (orden.pickingCompletedAt.getTime() - orden.pickingStartedAt.getTime()) / 1000
+            );
+        }
+
+        // Generar comprobante/voucher
+        const comprobante = {
+            nroComprobante: `PICK-${orden.nroDocumento}-${Date.now().toString(36).toUpperCase()}`,
+            fechaEmision: new Date().toISOString(),
+            orden: {
+                id: orden.id,
+                nroDocumento: orden.nroDocumento,
+                cliente: orden.cliente,
+                destino: orden.destino,
+                almacen: orden.almacen?.descripcion || orden.almacen?.codigo || 'N/A',
+                observacion: orden.observacion,
+            },
+            picking: {
+                usuarioPicking: orden.usuarioPicking || usuario,
+                iniciadoEn: orden.pickingStartedAt?.toISOString(),
+                completadoEn: orden.pickingCompletedAt?.toISOString(),
+                tiempoTotalSegundos,
+                tiempoFormateado: this.formatearTiempo(tiempoTotalSegundos),
+            },
+            items: orden.detalles.map(d => ({
+                codItem: d.codItem,
+                descripcion: d.item?.descripcion || d.codItem,
+                cantidadSolicitada: Number(d.cantidadSolicitada),
+                cantidadPickeada: Number(d.cantidadPickeada),
+                ubicacionOrigen: d.ubicacionOrigen,
+                tiempoPicking: d.tiempoPicking,
+            })),
+            totales: {
+                totalItems: orden.detalles.length,
+                totalUnidades: orden.detalles.reduce((sum, d) => sum + Number(d.cantidadPickeada), 0),
+            },
+        };
+
         return {
             exito: true,
             mensaje: `Picking completado para orden ${orden.nroDocumento}`,
@@ -214,9 +279,24 @@ export class PickingService {
                 pickingStartedAt: orden.pickingStartedAt,
                 pickingCompletedAt: orden.pickingCompletedAt,
             },
+            comprobante,
             siguientePaso: 'Despacho',
         };
     }
+
+    private formatearTiempo(segundos: number): string {
+        const horas = Math.floor(segundos / 3600);
+        const minutos = Math.floor((segundos % 3600) / 60);
+        const segs = segundos % 60;
+        if (horas > 0) {
+            return `${horas}h ${minutos}m ${segs}s`;
+        }
+        if (minutos > 0) {
+            return `${minutos}m ${segs}s`;
+        }
+        return `${segs}s`;
+    }
+
 
     // ============================================
     // MÉTRICAS

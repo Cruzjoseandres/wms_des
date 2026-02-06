@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Package, MapPin, CheckCircle, ScanLine, Play, Pause, Check, Layers, Loader2, RefreshCw, ScanBarcode, Camera, Keyboard } from "lucide-react"
+import { Package, MapPin, CheckCircle, ScanLine, Play, Pause, Check, Layers, Loader2, RefreshCw, ScanBarcode, Camera, Keyboard, Printer, X } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { PickingService } from "@/lib/api/picking.service"
 import {
@@ -22,6 +22,47 @@ import {
 import { toast } from "sonner"
 import { useScanDetection } from "@/hooks/use-scan-detection"
 import { ScannerModal } from "@/components/scanner/scanner-modal"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+// Tipo para el comprobante de picking
+interface ComprobantePickingItem {
+  codItem: string
+  descripcion: string
+  cantidadSolicitada: number
+  cantidadPickeada: number
+  ubicacionOrigen: string
+  tiempoPicking: number | null
+}
+
+interface ComprobantePicking {
+  nroComprobante: string
+  fechaEmision: string
+  orden: {
+    id: number
+    nroDocumento: string
+    cliente: string
+    destino: string
+    almacen: string
+    observacion: string
+  }
+  picking: {
+    usuarioPicking: string
+    iniciadoEn: string
+    completadoEn: string
+    tiempoTotalSegundos: number
+    tiempoFormateado: string
+  }
+  items: ComprobantePickingItem[]
+  totales: {
+    totalItems: number
+    totalUnidades: number
+  }
+}
 
 // Usuario hardcodeado para demo - en producción vendría de auth
 const CURRENT_USER = "PICKER_DEMO"
@@ -44,6 +85,10 @@ export default function PickingPage() {
   // Estado local para tracking de picking incremental
   // Key: detalleId, Value: cantidadPickeadaLocal
   const [localPickingProgress, setLocalPickingProgress] = useState<Record<number, number>>({})
+
+  // Estado para el comprobante/voucher
+  const [comprobante, setComprobante] = useState<ComprobantePicking | null>(null)
+  const [showComprobante, setShowComprobante] = useState(false)
 
   // Hook para detección de escáner Zebra
   useScanDetection({
@@ -299,8 +344,15 @@ export default function PickingPage() {
 
     try {
       setProcessing(true)
-      await PickingService.completarOrden(selectedOrden.id, CURRENT_USER)
+      const result = await PickingService.completarOrden(selectedOrden.id, CURRENT_USER)
       toast.success(`Picking completado para ${selectedOrden.nroDocumento}`)
+
+      // Mostrar comprobante si viene en la respuesta
+      if (result.comprobante) {
+        setComprobante(result.comprobante as ComprobantePicking)
+        setShowComprobante(true)
+      }
+
       setSelectedOrden(null)
       await loadOrdenes()
     } catch (error) {
@@ -309,6 +361,10 @@ export default function PickingPage() {
     } finally {
       setProcessing(false)
     }
+  }
+
+  const handlePrintComprobante = () => {
+    window.print()
   }
 
   return (
@@ -690,6 +746,144 @@ export default function PickingPage() {
         onOpenChange={setIsScannerModalOpen}
         onScanSuccess={handleCameraScan}
       />
+
+      {/* Modal de Comprobante de Picking */}
+      <Dialog open={showComprobante} onOpenChange={setShowComprobante}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto print:max-w-full print:max-h-full print:overflow-visible">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                Comprobante de Picking
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {comprobante && (
+            <div className="space-y-6 print:space-y-4">
+              {/* Header del comprobante */}
+              <div className="bg-secondary/50 rounded-lg p-4 border border-border">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nro. Comprobante</p>
+                    <p className="font-mono font-bold text-primary">{comprobante.nroComprobante}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Fecha Emisión</p>
+                    <p className="font-medium">
+                      {new Date(comprobante.fechaEmision).toLocaleString('es-PE')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info de la orden */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Orden de Salida</p>
+                  <p className="font-bold text-lg">{comprobante.orden.nroDocumento}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Cliente</p>
+                  <p className="font-medium">{comprobante.orden.cliente}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Destino</p>
+                  <p className="font-medium">{comprobante.orden.destino || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Almacén</p>
+                  <p className="font-medium">{comprobante.orden.almacen}</p>
+                </div>
+              </div>
+
+              {/* Info del picking */}
+              <div className="bg-green-600/10 rounded-lg p-4 border border-green-600/30">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Picker</p>
+                    <p className="font-medium">{comprobante.picking.usuarioPicking}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Tiempo Total</p>
+                    <p className="font-bold text-green-400">{comprobante.picking.tiempoFormateado}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Completado</p>
+                    <p className="font-medium">
+                      {new Date(comprobante.picking.completadoEn).toLocaleTimeString('es-PE')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabla de items */}
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-secondary">
+                      <TableHead>Producto</TableHead>
+                      <TableHead>Ubicación</TableHead>
+                      <TableHead className="text-center">Solicitado</TableHead>
+                      <TableHead className="text-center">Pickeado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {comprobante.items.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <p className="font-medium">{item.codItem}</p>
+                          <p className="text-xs text-muted-foreground">{item.descripcion}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {item.ubicacionOrigen || 'N/A'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">{item.cantidadSolicitada}</TableCell>
+                        <TableCell className="text-center font-bold text-green-400">
+                          {item.cantidadPickeada}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Totales */}
+              <div className="flex justify-between items-center bg-secondary/50 rounded-lg p-4 border border-border">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Items</p>
+                  <p className="font-bold text-xl">{comprobante.totales.totalItems}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Total Unidades</p>
+                  <p className="font-bold text-xl text-primary">{comprobante.totales.totalUnidades}</p>
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="flex justify-end gap-3 print:hidden">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowComprobante(false)}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cerrar
+                </Button>
+                <Button
+                  onClick={handlePrintComprobante}
+                  className="bg-primary"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Imprimir
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   )
 }
