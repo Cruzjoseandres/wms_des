@@ -572,6 +572,18 @@ async function seed() {
                 { codItem: 'PLAST-010', cantidad: 2, cantidadEsperada: 2, lote: 'PT-010' },
             ],
         },
+        // ===== NOTA SIMPLE CON 1 SOLO ITEM PARA TESTING =====
+        {
+            nroDocumento: 'SIMPLE-001',
+            origen: 'Test Simple',
+            estado: 0, // PALETIZADO
+            observacion: 'PRUEBA SIMPLE - 1 solo item, 5 unidades de Bolsa',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'PLAST-001', cantidad: 5, cantidadEsperada: 5, lote: 'SIMPLE-L01' },
+            ],
+        },
     ];
 
     const notasCreadas: Record<string, NotaIngreso> = {};
