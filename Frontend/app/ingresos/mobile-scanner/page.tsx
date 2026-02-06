@@ -167,16 +167,22 @@ export default function MobileScannerPage() {
 
     // Fetch existing stock locations for a product
     const fetchExistingLocations = async (itemCode: string) => {
+        console.log("[fetchExistingLocations] Buscando ubicaciones para:", itemCode)
         try {
             const res = await fetch(`${API_ENDPOINTS.stockInventario}/por-codigo/${itemCode}`, {
                 cache: 'no-store'
             })
+            console.log("[fetchExistingLocations] Response status:", res.status)
             if (res.ok) {
                 const stockData: Array<{ ubicacion: string, cantidad: number }> = await res.json()
+                console.log("[fetchExistingLocations] Datos recibidos:", stockData)
                 setExistingLocations(stockData.map(s => ({ ubicacion: s.ubicacion, cantidad: Number(s.cantidad) })))
                 // Si hay ubicaciones existentes, pre-llenar con la primera (la que tiene más stock)
                 if (stockData.length > 0) {
                     setInputLocation(stockData[0].ubicacion)
+                    toast.info(`📍 Ubicación sugerida: ${stockData[0].ubicacion}`)
+                } else {
+                    toast.info("Este producto no tiene stock previo. Ingresa una nueva ubicación.")
                 }
             }
         } catch (error) {
