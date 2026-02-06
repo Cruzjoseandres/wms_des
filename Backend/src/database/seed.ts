@@ -417,6 +417,66 @@ async function seed() {
                 { codItem: 'PROD-002', cantidad: 25, cantidadEsperada: 25, lote: 'LOTE-P002' },
             ],
         },
+        // ===== NUEVOS INGRESOS DE PRUEBA PARA SCANNER MOVIL =====
+        {
+            nroDocumento: 'TEST-001',
+            origen: 'Test Scanner',
+            estado: 0, // PALETIZADO - Listo para validar
+            observacion: 'Ingreso de prueba - 1 producto, 5 unidades',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'FARM-001', cantidad: 5, cantidadEsperada: 5, lote: 'TEST-L001', fechaVencimiento: new Date('2026-12-31') },
+            ],
+        },
+        {
+            nroDocumento: 'TEST-002',
+            origen: 'Test Scanner',
+            estado: 0, // PALETIZADO - Listo para validar
+            observacion: 'Ingreso de prueba - 2 productos diferentes',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'ELEC-001', cantidad: 3, cantidadEsperada: 3, lote: 'TEST-E001' },
+                { codItem: 'ELEC-002', cantidad: 2, cantidadEsperada: 2, lote: 'TEST-E002' },
+            ],
+        },
+        {
+            nroDocumento: 'TEST-003',
+            origen: 'Test Scanner',
+            estado: 0, // PALETIZADO - Listo para validar
+            observacion: 'Ingreso de prueba - Alimentos',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-FRIO',
+            detalles: [
+                { codItem: 'ALIM-001', cantidad: 10, cantidadEsperada: 10, lote: 'TEST-A001', fechaVencimiento: new Date('2025-06-30') },
+            ],
+        },
+        {
+            nroDocumento: 'TEST-004',
+            origen: 'Test Scanner',
+            estado: 1, // VALIDADO - Listo para almacenar
+            observacion: 'Ingreso de prueba - Ya validado, escanear ubicación',
+            usuarioCreacion: 'SISTEMA',
+            usuarioValidacion: 'OPERARIO_TEST',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'PROD-001', cantidad: 3, cantidadEsperada: 3, lote: 'TEST-P001' },
+            ],
+        },
+        {
+            nroDocumento: 'TEST-005',
+            origen: 'Test Scanner',
+            estado: 0, // PALETIZADO - Listo para validar
+            observacion: 'Ingreso de prueba - Múltiples productos',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'LIMP-001', cantidad: 4, cantidadEsperada: 4, lote: 'TEST-LM01' },
+                { codItem: 'LIMP-002', cantidad: 6, cantidadEsperada: 6, lote: 'TEST-LM02' },
+                { codItem: 'OFIC-001', cantidad: 2, cantidadEsperada: 2, lote: 'TEST-OF01' },
+            ],
+        },
         {
             nroDocumento: 'ING-2024-004',
             origen: 'Compra Local',
