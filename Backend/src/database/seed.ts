@@ -160,6 +160,17 @@ async function seed() {
         // Oficina - Proveedor PROV-005
         { codigo: 'OFIC-001', descripcion: 'Papel Bond A4 500 hojas', unidadMedida: 'RESMA', precio: 15.00, codSubcategoria: 'OFIC-01', estado: 1, stock: 0, codigoBarra: '7506666555001', codigoFabrica: 'XEROX-PB-A4', codigoProducto: 'PAPE-A4-01', proveedorCodigo: 'PROV-005' },
         { codigo: 'OFIC-002', descripcion: 'Bolígrafos Azules x12', unidadMedida: 'CAJA', precio: 8.00, codSubcategoria: 'OFIC-01', estado: 1, stock: 0, codigoBarra: '7506666555002', codigoFabrica: 'BIC-BA-12', codigoProducto: 'BOLI-AZU-02', proveedorCodigo: 'PROV-005' },
+        // Plásticos - Sin proveedor asignado
+        { codigo: 'PLAST-001', descripcion: 'Bolsa 1', unidadMedida: 'UNID', precio: 1.00, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666001', codigoFabrica: 'PLAS-B-001', codigoProducto: 'BOLS-001' },
+        { codigo: 'PLAST-002', descripcion: 'Vaso 2', unidadMedida: 'UNID', precio: 0.50, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666002', codigoFabrica: 'PLAS-V-002', codigoProducto: 'VASO-002' },
+        { codigo: 'PLAST-003', descripcion: 'Plato 3', unidadMedida: 'UNID', precio: 0.80, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666003', codigoFabrica: 'PLAS-P-003', codigoProducto: 'PLAT-003' },
+        { codigo: 'PLAST-004', descripcion: 'Cuchara 4', unidadMedida: 'UNID', precio: 0.30, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666004', codigoFabrica: 'PLAS-C-004', codigoProducto: 'CUCH-004' },
+        { codigo: 'PLAST-005', descripcion: 'Cuchillo 5', unidadMedida: 'UNID', precio: 0.35, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666005', codigoFabrica: 'PLAS-CU-005', codigoProducto: 'CUCH-005' },
+        { codigo: 'PLAST-006', descripcion: 'Tenedor 6', unidadMedida: 'UNID', precio: 0.32, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666006', codigoFabrica: 'PLAS-T-006', codigoProducto: 'TENE-006' },
+        { codigo: 'PLAST-007', descripcion: 'Tapa 7', unidadMedida: 'UNID', precio: 0.25, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666007', codigoFabrica: 'PLAS-TA-007', codigoProducto: 'TAPA-007' },
+        { codigo: 'PLAST-008', descripcion: 'Contenedor 8', unidadMedida: 'UNID', precio: 2.00, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666008', codigoFabrica: 'PLAS-CO-008', codigoProducto: 'CONT-008' },
+        { codigo: 'PLAST-009', descripcion: 'Botella 9', unidadMedida: 'UNID', precio: 1.50, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666009', codigoFabrica: 'PLAS-BO-009', codigoProducto: 'BOTE-009' },
+        { codigo: 'PLAST-010', descripcion: 'Embalaje 10', unidadMedida: 'UNID', precio: 3.00, codSubcategoria: 'PLAS-01', estado: 1, stock: 0, codigoBarra: '7507777666010', codigoFabrica: 'PLAS-EM-010', codigoProducto: 'EMBA-010' },
     ];
 
     for (const data of itemsData) {
@@ -569,6 +580,17 @@ async function seed() {
             { sku: 'LIMP-002', ubicacion: 'E-01-01-02', cantidad: 120, estado: 'DISPONIBLE' },
             { sku: 'OFIC-001', ubicacion: 'F-01-01-01', cantidad: 200, estado: 'DISPONIBLE' },
             { sku: 'OFIC-002', ubicacion: 'F-01-01-02', cantidad: 100, estado: 'DISPONIBLE' },
+            // Plásticos - Stock inicial
+            { sku: 'PLAST-001', ubicacion: 'G-01-01-01', cantidad: 97, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-002', ubicacion: 'G-01-01-02', cantidad: 61, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-003', ubicacion: 'G-01-02-01', cantidad: 17, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-004', ubicacion: 'G-01-02-02', cantidad: 55, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-005', ubicacion: 'G-02-01-01', cantidad: 89, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-006', ubicacion: 'G-02-01-02', cantidad: 89, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-007', ubicacion: 'G-02-02-01', cantidad: 41, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-008', ubicacion: 'G-02-02-02', cantidad: 48, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-009', ubicacion: 'G-03-01-01', cantidad: 27, estado: 'DISPONIBLE' },
+            { sku: 'PLAST-010', ubicacion: 'G-03-01-02', cantidad: 52, estado: 'DISPONIBLE' },
         ];
 
         const itemsMap = new Map<string, Item>();
