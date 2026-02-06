@@ -33,6 +33,15 @@ export class StockInventarioController {
     }
 
     /**
+     * GET /stock-inventario/por-codigo/:codigo
+     * Obtiene stock por código de item (para mobile scanner)
+     */
+    @Get('por-codigo/:codigo')
+    obtenerPorCodigo(@Param('codigo') codigo: string) {
+        return this.stockInventarioService.obtenerPorCodigoItem(codigo);
+    }
+
+    /**
      * GET /stock-inventario/por-ubicacion/:ubicacion
      * Obtiene stock por ubicación
      */
@@ -41,3 +50,4 @@ export class StockInventarioController {
         return this.stockInventarioService.obtenerPorUbicacion(ubicacion);
     }
 }
+

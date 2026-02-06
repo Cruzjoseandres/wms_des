@@ -58,6 +58,17 @@ export class StockInventarioService {
     }
 
     /**
+     * Obtiene stock por código de item (para mobile scanner)
+     */
+    async obtenerPorCodigoItem(codigoItem: string): Promise<StockInventario[]> {
+        return await this.stockRepo.find({
+            where: { item: { codigo: codigoItem } },
+            relations: ['detalleIngreso', 'item'],
+            order: { cantidad: 'DESC' }, // Primero la ubicación con más stock
+        });
+    }
+
+    /**
      * Obtiene stock por ubicación
      */
     async obtenerPorUbicacion(ubicacion: string): Promise<StockInventario[]> {

@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { MovilService } from "@/lib/api/movil.service"
+import { API_ENDPOINTS } from "@/lib/api/config"
 import { EstadoDetalle, type OrdenMovil, type DetalleMovil } from "@/lib/models"
 import { EditDetalleModal } from "@/components/ingresos/edit-detalle-modal"
 import { ConfirmIngresoModal } from "@/components/ingresos/confirm-ingreso-modal"
@@ -128,6 +129,7 @@ export default function MobileScannerPage() {
     const [inputLocation, setInputLocation] = useState("")
     const [scannedPaletData, setScannedPaletData] = useState<DetallePalet | null>(null)
     const [processingAction, setProcessingAction] = useState(false)
+    const [existingLocations, setExistingLocations] = useState<Array<{ ubicacion: string, cantidad: number }>>([]) // Ubicaciones existentes del item
 
     // Lists State
     const [showPendingList, setShowPendingList] = useState(true)
@@ -163,12 +165,34 @@ export default function MobileScannerPage() {
         }
     }
 
+    // Fetch existing stock locations for a product
+    const fetchExistingLocations = async (itemCode: string) => {
+        try {
+            const res = await fetch(`${API_ENDPOINTS.stockInventario}/por-codigo/${itemCode}`, {
+                cache: 'no-store'
+            })
+            if (res.ok) {
+                const stockData: Array<{ ubicacion: string, cantidad: number }> = await res.json()
+                setExistingLocations(stockData.map(s => ({ ubicacion: s.ubicacion, cantidad: Number(s.cantidad) })))
+                // Si hay ubicaciones existentes, pre-llenar con la primera (la que tiene más stock)
+                if (stockData.length > 0) {
+                    setInputLocation(stockData[0].ubicacion)
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching existing locations:", error)
+            setExistingLocations([])
+        }
+    }
+
     // Helper para cambiar de modo y recargar datos
     const handleModeSwitch = async (newMode: "validation" | "storage") => {
         setWorkMode(newMode)
         setScannedPaletData(null)
         setInputPalet("")
         setScanCounts({})
+        setExistingLocations([])
+        setInputLocation("")
 
         // Recargar órdenes para el nuevo modo
         const newOrdenes = await loadOrdenes(newMode)
@@ -930,7 +954,6 @@ export default function MobileScannerPage() {
                                             </div>
                                         </div>
 
-                                        {/* Manual Input */}
                                         <div className="flex gap-2 items-center">
                                             <div className="relative flex-1">
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">📍</span>
@@ -951,8 +974,34 @@ export default function MobileScannerPage() {
                                                 <ScanBarcode className="w-5 h-5" />
                                             </Button>
                                         </div>
+
+                                        {/* Ubicaciones existentes del producto */}
+                                        {existingLocations.length > 0 && (
+                                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                                                <p className="text-xs text-blue-700 font-medium mb-1">📦 Ubicaciones existentes (click para usar):</p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {existingLocations.map((loc, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            className={cn(
+                                                                "px-2 py-1 text-xs rounded font-mono transition-colors",
+                                                                inputLocation === loc.ubicacion
+                                                                    ? "bg-blue-600 text-white"
+                                                                    : "bg-white border border-blue-300 text-blue-700 hover:bg-blue-100"
+                                                            )}
+                                                            onClick={() => setInputLocation(loc.ubicacion)}
+                                                        >
+                                                            {loc.ubicacion} ({loc.cantidad})
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <p className="text-xs text-blue-600 mt-1">O escribe una nueva ubicación arriba</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
+
 
                                 {/* Pallet/Item Input */}
                                 <div className="space-y-2">
@@ -1205,6 +1254,10 @@ export default function MobileScannerPage() {
                                                     onClick={() => {
                                                         setInputPalet(p.codigo)
                                                         setScannedPaletData(p)
+                                                        // En modo almacenaje, buscar ubicaciones existentes
+                                                        if (workMode === "storage") {
+                                                            fetchExistingLocations(p.itemCode)
+                                                        }
                                                     }}
                                                 >
                                                     <div className="font-semibold text-slate-600 flex items-center">
@@ -1291,6 +1344,6 @@ export default function MobileScannerPage() {
                     }
                 />
             </>
-        </MainLayout>
+        </MainLayout >
     )
 }
