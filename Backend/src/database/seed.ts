@@ -264,6 +264,21 @@ async function seed() {
                 { codItem: 'PROD-002', descripcion: 'Martillo de Goma', cantidad: 100, lote: 'LOTE-P002', codigoBarra: '7501234567002', sku: 'PROD-002', codigoFabrica: 'STAN-MG-002', codigoSistema: 'SAP-PROD-002', unidadMedida: 'PZA' },
             ],
         },
+        // Documento de prueba simple con productos PLAST (para testing)
+        {
+            nroDocumento: 'PLAST-TEST-001',
+            descripcion: 'Plásticos de Prueba - Simple',
+            tipoFuente: 'API_ERP',
+            proveedor: 'Plásticos del Pacífico',
+            fechaDocumento: new Date(),
+            estado: 'pendiente',
+            datosRaw: { pedido: 'TEST-2024-001', sistema: 'TEST' },
+            items: [
+                { codItem: 'PLAST-001', descripcion: 'Bolsa Plástica 10L', cantidad: 10, lote: 'PLAST-001-L1', codigoBarra: '7501000000001', sku: 'PLAST-001', codigoFabrica: 'PLAST-BOLSA-10L', codigoSistema: 'PLAST-001', unidadMedida: 'PQTE' },
+                { codItem: 'PLAST-002', descripcion: 'Vaso Descartable 12oz', cantidad: 5, lote: 'PLAST-002-L1', codigoBarra: '7501000000002', sku: 'PLAST-002', codigoFabrica: 'PLAST-VASO-12OZ', codigoSistema: 'PLAST-002', unidadMedida: 'PQTE' },
+                { codItem: 'PLAST-003', descripcion: 'Plato Descartable', cantidad: 3, lote: 'PLAST-003-L1', codigoBarra: '7501000000003', sku: 'PLAST-003', codigoFabrica: 'PLAST-PLATO', codigoSistema: 'PLAST-003', unidadMedida: 'PQTE' },
+            ],
+        },
         // Documentos MANUAL (ingresados manualmente)
         {
             nroDocumento: 'INT-2024-001',
