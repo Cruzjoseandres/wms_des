@@ -337,6 +337,63 @@ export default function PickingPage() {
     }
   }
 
+  // Manejar click en fila para poner código en input
+  const handleRowClick = (detalle: DetalleSalida) => {
+    // Usar código de barra si existe, sino usar código de item
+    const codigo = detalle.item?.codigoBarra || detalle.codItem
+    setScanInput(codigo)
+    // Enfocar el input
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }
+
+  // Marcar item como OK (enviar al backend cuando está listo)
+  const handleMarcarOK = async (detalle: DetalleSalida) => {
+    if (!selectedOrden) return
+
+    const cantidadTotal = getCantidadPickeada(detalle)
+
+    // Solo permitir marcar OK si la cantidad está completa
+    if (cantidadTotal < detalle.cantidadSolicitada) {
+      toast.warning(`Falta completar ${detalle.cantidadSolicitada - cantidadTotal} unidades`)
+      return
+    }
+
+    // Si ya está marcado como PICKEADO en backend, no hacer nada
+    if (detalle.estado === EstadoDetalleSalida.PICKEADO) {
+      toast.info("Este item ya está marcado como OK")
+      return
+    }
+
+    try {
+      setProcessing(true)
+
+      // Si es el primer registro, iniciar tiempo
+      if ((detalle.cantidadPickeada || 0) === 0) {
+        await PickingService.iniciarDetalle(detalle.id, CURRENT_USER)
+      }
+
+      // Enviar cantidad total al backend
+      await PickingService.pickearDetalle(detalle.id, cantidadTotal, CURRENT_USER)
+
+      toast.success(`✓ ${detalle.codItem} marcado como OK`)
+
+      // Limpiar progreso local para este detalle
+      setLocalPickingProgress(prev => {
+        const { [detalle.id]: _, ...rest } = prev
+        return rest
+      })
+
+      await loadOrdenes()
+    } catch (error) {
+      console.error("Error marcando como OK:", error)
+      toast.error(error instanceof Error ? error.message : "Error al marcar item como OK")
+    } finally {
+      setProcessing(false)
+    }
+  }
+
 
 
   const handleFinalizarPicking = async () => {
@@ -623,7 +680,11 @@ export default function PickingPage() {
                           {selectedOrden.detalles?.map((detalle) => (
                             <TableRow
                               key={detalle.id}
-                              className={detalle.estado === EstadoDetalleSalida.PICKEADO ? "bg-green-600/10" : ""}
+                              className={`cursor-pointer transition-colors ${detalle.estado === EstadoDetalleSalida.PICKEADO
+                                  ? "bg-green-600/10"
+                                  : "hover:bg-secondary/50"
+                                }`}
+                              onClick={() => handleRowClick(detalle)}
                             >
                               <TableCell>
                                 <div>
@@ -647,7 +708,7 @@ export default function PickingPage() {
                                 <span
                                   className={
                                     isDetalleCompleto(detalle)
-                                      ? "text-green-400"
+                                      ? "text-green-400 font-bold"
                                       : (localPickingProgress[detalle.id] || 0) > 0
                                         ? "text-blue-400"
                                         : "text-yellow-400"
@@ -657,19 +718,41 @@ export default function PickingPage() {
                                 </span>
                               </TableCell>
                               <TableCell>
-                                {isDetalleCompleto(detalle) ? (
+                                {detalle.estado === EstadoDetalleSalida.PICKEADO ? (
                                   <Badge className="bg-green-600">
                                     <CheckCircle className="w-3 h-3 mr-1" />
                                     OK
                                   </Badge>
+                                ) : getCantidadPickeada(detalle) >= detalle.cantidadSolicitada ? (
+                                  <Badge className="bg-orange-500">Listo</Badge>
                                 ) : (localPickingProgress[detalle.id] || 0) > 0 ? (
                                   <Badge className="bg-blue-600">En Progreso</Badge>
                                 ) : (
                                   <Badge className="bg-yellow-600">Pendiente</Badge>
                                 )}
                               </TableCell>
-                              <TableCell>
-                                {!isDetalleCompleto(detalle) && (
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                {detalle.estado === EstadoDetalleSalida.PICKEADO ? (
+                                  <CheckCircle className="w-5 h-5 text-green-500" />
+                                ) : getCantidadPickeada(detalle) >= detalle.cantidadSolicitada ? (
+                                  /* Cantidad completa - mostrar botón para marcar OK */
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                                    onClick={() => handleMarcarOK(detalle)}
+                                    disabled={processing}
+                                  >
+                                    {processing ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Check className="w-3 h-3 mr-1" />
+                                        OK
+                                      </>
+                                    )}
+                                  </Button>
+                                ) : (
+                                  /* Cantidad incompleta - botón para sumar +1 */
                                   <Button
                                     size="sm"
                                     variant="outline"

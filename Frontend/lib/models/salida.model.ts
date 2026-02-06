@@ -150,6 +150,37 @@ export interface CompletarPickingResponse {
         pickingStartedAt: string;
         pickingCompletedAt: string;
     };
+    comprobante?: {
+        nroComprobante: string;
+        fechaEmision: string;
+        orden: {
+            id: number;
+            nroDocumento: string;
+            cliente: string;
+            destino: string;
+            almacen: string;
+            observacion: string;
+        };
+        picking: {
+            usuarioPicking: string;
+            iniciadoEn: string;
+            completadoEn: string;
+            tiempoTotalSegundos: number;
+            tiempoFormateado: string;
+        };
+        items: Array<{
+            codItem: string;
+            descripcion: string;
+            cantidadSolicitada: number;
+            cantidadPickeada: number;
+            ubicacionOrigen: string;
+            tiempoPicking: number | null;
+        }>;
+        totales: {
+            totalItems: number;
+            totalUnidades: number;
+        };
+    };
     siguientePaso: string;
 }
 
