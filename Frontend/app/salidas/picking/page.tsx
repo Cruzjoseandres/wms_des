@@ -213,30 +213,30 @@ export default function PickingPage() {
       return
     }
 
-    // Calcular cantidad actual = backend + local
-    const cantidadBackend = detalle.cantidadPickeada || 0
-    const cantidadLocal = localPickingProgress[detalle.id] || 0
-    const cantidadActual = cantidadBackend + cantidadLocal
+    // Usar updater function para evitar stale closure
+    setLocalPickingProgress(prev => {
+      const cantidadBackend = detalle.cantidadPickeada || 0
+      const cantidadLocal = prev[detalle.id] || 0
+      const cantidadActual = cantidadBackend + cantidadLocal
 
-    // Validar que no exceda la cantidad solicitada
-    if (cantidadActual >= detalle.cantidadSolicitada) {
-      toast.warning(`${detalle.codItem} ya tiene la cantidad completa (${cantidadActual}/${detalle.cantidadSolicitada}). Presione OK para confirmar.`)
-      setScanInput("")
-      return
-    }
+      // Validar que no exceda la cantidad solicitada
+      if (cantidadActual >= detalle.cantidadSolicitada) {
+        toast.warning(`${detalle.codItem} ya tiene la cantidad completa (${cantidadActual}/${detalle.cantidadSolicitada}). Presione OK para confirmar.`)
+        return prev // No cambiar estado
+      }
 
-    // Incrementar contador local
-    const nuevaCantidadLocal = cantidadLocal + 1
-    const nuevaCantidadTotal = cantidadBackend + nuevaCantidadLocal
+      // Incrementar contador
+      const nuevaCantidadLocal = cantidadLocal + 1
+      const nuevaCantidadTotal = cantidadBackend + nuevaCantidadLocal
 
-    // Actualizar estado local inmediatamente
-    setLocalPickingProgress(prev => ({
-      ...prev,
-      [detalle.id]: nuevaCantidadLocal
-    }))
+      // Mostrar progreso
+      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
 
-    // Mostrar progreso
-    toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
+      return {
+        ...prev,
+        [detalle.id]: nuevaCantidadLocal
+      }
+    })
 
     // Limpiar input
     setScanInput("")
@@ -263,29 +263,30 @@ export default function PickingPage() {
       return
     }
 
-    // Calcular cantidad actual = backend + local
-    const cantidadBackend = detalle.cantidadPickeada || 0
-    const cantidadLocal = localPickingProgress[detalle.id] || 0
-    const cantidadActual = cantidadBackend + cantidadLocal
+    // Usar updater function para evitar stale closure
+    setLocalPickingProgress(prev => {
+      const cantidadBackend = detalle.cantidadPickeada || 0
+      const cantidadLocal = prev[detalle.id] || 0
+      const cantidadActual = cantidadBackend + cantidadLocal
 
-    // Validar que no exceda la cantidad solicitada
-    if (cantidadActual >= detalle.cantidadSolicitada) {
-      toast.warning(`${detalle.codItem} ya tiene la cantidad completa. Presione OK para confirmar.`)
-      return
-    }
+      // Validar que no exceda la cantidad solicitada
+      if (cantidadActual >= detalle.cantidadSolicitada) {
+        toast.warning(`${detalle.codItem} ya tiene la cantidad completa. Presione OK para confirmar.`)
+        return prev // No cambiar estado
+      }
 
-    // Incrementar contador local
-    const nuevaCantidadLocal = cantidadLocal + 1
-    const nuevaCantidadTotal = cantidadBackend + nuevaCantidadLocal
+      // Incrementar contador
+      const nuevaCantidadLocal = cantidadLocal + 1
+      const nuevaCantidadTotal = cantidadBackend + nuevaCantidadLocal
 
-    // Actualizar estado local inmediatamente
-    setLocalPickingProgress(prev => ({
-      ...prev,
-      [detalle.id]: nuevaCantidadLocal
-    }))
+      // Mostrar progreso
+      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
 
-    // Mostrar progreso
-    toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
+      return {
+        ...prev,
+        [detalle.id]: nuevaCantidadLocal
+      }
+    })
   }
 
   // Manejar click en fila para poner código en input
