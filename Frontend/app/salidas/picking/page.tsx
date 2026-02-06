@@ -189,7 +189,7 @@ export default function PickingPage() {
       detalle.estado === EstadoDetalleSalida.PICKEADO
   }
 
-  // Función central para procesar el código escaneado
+  // Función central para procesar el código escaneado (Zebra o Manual+Confirmar)
   const processScannedCode = async (code: string) => {
     if (!selectedOrden || !code.trim()) return
 
@@ -202,21 +202,32 @@ export default function PickingPage() {
 
     if (!detalle) {
       toast.error("Código no encontrado en esta orden")
+      setScanInput("")
       return
     }
 
-    // Calcular la cantidad actual (backend + local)
-    const cantidadTotal = getCantidadPickeada(detalle)
-    const cantidadFaltante = detalle.cantidadSolicitada - cantidadTotal
+    // Si ya está marcado como PICKEADO en backend, no hacer nada más
+    if (detalle.estado === EstadoDetalleSalida.PICKEADO) {
+      toast.warning("Este item ya fue confirmado como OK")
+      setScanInput("")
+      return
+    }
 
-    if (cantidadFaltante <= 0 || detalle.estado === EstadoDetalleSalida.PICKEADO) {
-      toast.warning("Este item ya fue pickeado completamente")
+    // Calcular cantidad actual = backend + local
+    const cantidadBackend = detalle.cantidadPickeada || 0
+    const cantidadLocal = localPickingProgress[detalle.id] || 0
+    const cantidadActual = cantidadBackend + cantidadLocal
+
+    // Validar que no exceda la cantidad solicitada
+    if (cantidadActual >= detalle.cantidadSolicitada) {
+      toast.warning(`${detalle.codItem} ya tiene la cantidad completa (${cantidadActual}/${detalle.cantidadSolicitada}). Presione OK para confirmar.`)
+      setScanInput("")
       return
     }
 
     // Incrementar contador local
-    const nuevaCantidadLocal = (localPickingProgress[detalle.id] || 0) + 1
-    const nuevaCantidadTotal = (detalle.cantidadPickeada || 0) + nuevaCantidadLocal
+    const nuevaCantidadLocal = cantidadLocal + 1
+    const nuevaCantidadTotal = cantidadBackend + nuevaCantidadLocal
 
     // Actualizar estado local inmediatamente
     setLocalPickingProgress(prev => ({
@@ -225,43 +236,9 @@ export default function PickingPage() {
     }))
 
     // Mostrar progreso
-    if (nuevaCantidadTotal < detalle.cantidadSolicitada) {
-      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
-    } else {
-      // Cantidad completa - enviar al backend
-      try {
-        setProcessing(true)
+    toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
 
-        // Si es el primer escaneo (sin cantidad backend), iniciar tiempo
-        if ((detalle.cantidadPickeada || 0) === 0) {
-          await PickingService.iniciarDetalle(detalle.id, CURRENT_USER)
-        }
-
-        // Enviar cantidad total al backend
-        await PickingService.pickearDetalle(detalle.id, nuevaCantidadTotal, CURRENT_USER)
-
-        toast.success(`✓ ${detalle.codItem} completado (${nuevaCantidadTotal}/${detalle.cantidadSolicitada})`)
-
-        // Limpiar progreso local para este detalle
-        setLocalPickingProgress(prev => {
-          const { [detalle.id]: _, ...rest } = prev
-          return rest
-        })
-
-        await loadOrdenes()
-      } catch (error) {
-        console.error("Error pickeando detalle:", error)
-        toast.error(error instanceof Error ? error.message : "Error al pickear item")
-        // Revertir incremento local en caso de error
-        setLocalPickingProgress(prev => ({
-          ...prev,
-          [detalle.id]: (prev[detalle.id] || 1) - 1
-        }))
-      } finally {
-        setProcessing(false)
-      }
-    }
-
+    // Limpiar input
     setScanInput("")
   }
 
@@ -276,21 +253,30 @@ export default function PickingPage() {
     await processScannedCode(code)
   }
 
+  // Sumar +1 al pickeado (botón check en fila cuando está incompleto)
   const handlePickearDirecto = async (detalle: DetalleSalida) => {
     if (!selectedOrden) return
 
-    // Calcular la cantidad actual (backend + local)
-    const cantidadTotal = getCantidadPickeada(detalle)
-    const cantidadFaltante = detalle.cantidadSolicitada - cantidadTotal
+    // Si ya está marcado como PICKEADO en backend, no hacer nada
+    if (detalle.estado === EstadoDetalleSalida.PICKEADO) {
+      toast.warning("Este item ya fue confirmado como OK")
+      return
+    }
 
-    if (cantidadFaltante <= 0 || detalle.estado === EstadoDetalleSalida.PICKEADO) {
-      toast.warning("Este item ya fue pickeado completamente")
+    // Calcular cantidad actual = backend + local
+    const cantidadBackend = detalle.cantidadPickeada || 0
+    const cantidadLocal = localPickingProgress[detalle.id] || 0
+    const cantidadActual = cantidadBackend + cantidadLocal
+
+    // Validar que no exceda la cantidad solicitada
+    if (cantidadActual >= detalle.cantidadSolicitada) {
+      toast.warning(`${detalle.codItem} ya tiene la cantidad completa. Presione OK para confirmar.`)
       return
     }
 
     // Incrementar contador local
-    const nuevaCantidadLocal = (localPickingProgress[detalle.id] || 0) + 1
-    const nuevaCantidadTotal = (detalle.cantidadPickeada || 0) + nuevaCantidadLocal
+    const nuevaCantidadLocal = cantidadLocal + 1
+    const nuevaCantidadTotal = cantidadBackend + nuevaCantidadLocal
 
     // Actualizar estado local inmediatamente
     setLocalPickingProgress(prev => ({
@@ -299,42 +285,7 @@ export default function PickingPage() {
     }))
 
     // Mostrar progreso
-    if (nuevaCantidadTotal < detalle.cantidadSolicitada) {
-      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
-    } else {
-      // Cantidad completa - enviar al backend
-      try {
-        setProcessing(true)
-
-        // Si es el primer escaneo (sin cantidad backend), iniciar tiempo
-        if ((detalle.cantidadPickeada || 0) === 0) {
-          await PickingService.iniciarDetalle(detalle.id, CURRENT_USER)
-        }
-
-        // Enviar cantidad total al backend
-        await PickingService.pickearDetalle(detalle.id, nuevaCantidadTotal, CURRENT_USER)
-
-        toast.success(`✓ ${detalle.codItem} completado (${nuevaCantidadTotal}/${detalle.cantidadSolicitada})`)
-
-        // Limpiar progreso local para este detalle
-        setLocalPickingProgress(prev => {
-          const { [detalle.id]: _, ...rest } = prev
-          return rest
-        })
-
-        await loadOrdenes()
-      } catch (error) {
-        console.error("Error pickeando detalle:", error)
-        toast.error(error instanceof Error ? error.message : "Error al pickear item")
-        // Revertir incremento local en caso de error
-        setLocalPickingProgress(prev => ({
-          ...prev,
-          [detalle.id]: (prev[detalle.id] || 1) - 1
-        }))
-      } finally {
-        setProcessing(false)
-      }
-    }
+    toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
   }
 
   // Manejar click en fila para poner código en input
@@ -681,8 +632,8 @@ export default function PickingPage() {
                             <TableRow
                               key={detalle.id}
                               className={`cursor-pointer transition-colors ${detalle.estado === EstadoDetalleSalida.PICKEADO
-                                  ? "bg-green-600/10"
-                                  : "hover:bg-secondary/50"
+                                ? "bg-green-600/10"
+                                : "hover:bg-secondary/50"
                                 }`}
                               onClick={() => handleRowClick(detalle)}
                             >
