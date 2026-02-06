@@ -488,6 +488,18 @@ async function seed() {
                 { codItem: 'LIMP-001', cantidad: 50, cantidadEsperada: 50, lote: 'LOTE-L001' },
             ],
         },
+        // ===== NOTA PARA TESTING DE INCREMENTO DE STOCK =====
+        {
+            nroDocumento: 'STOCK-TEST-001',
+            origen: 'Test Stock',
+            estado: 0, // PALETIZADO - Listo para validar y almacenar
+            observacion: 'Ingreso de prueba - SOLO 1 producto con 10 unidades para test de stock',
+            usuarioCreacion: 'SISTEMA',
+            almacenCodigo: 'ALM-CENT',
+            detalles: [
+                { codItem: 'FARM-001', cantidad: 10, cantidadEsperada: 10, lote: 'STOCK-L001', fechaVencimiento: new Date('2027-12-31'), ubicacionFinal: 'Z-99-01-01' },
+            ],
+        },
     ];
 
     const notasCreadas: Record<string, NotaIngreso> = {};
