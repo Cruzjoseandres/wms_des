@@ -215,12 +215,22 @@ export default function PickingPage() {
 
     // Usar updater function para evitar stale closure
     setLocalPickingProgress(prev => {
+      console.log('[Picking Debug] processScannedCode called')
+      console.log('[Picking Debug] detalle.id:', detalle.id)
+      console.log('[Picking Debug] prev state:', JSON.stringify(prev))
+
       const cantidadBackend = detalle.cantidadPickeada || 0
       const cantidadLocal = prev[detalle.id] || 0
       const cantidadActual = cantidadBackend + cantidadLocal
 
+      console.log('[Picking Debug] cantidadBackend:', cantidadBackend)
+      console.log('[Picking Debug] cantidadLocal:', cantidadLocal)
+      console.log('[Picking Debug] cantidadActual:', cantidadActual)
+      console.log('[Picking Debug] cantidadSolicitada:', detalle.cantidadSolicitada)
+
       // Validar que no exceda la cantidad solicitada
       if (cantidadActual >= detalle.cantidadSolicitada) {
+        console.log('[Picking Debug] BLOCKED - cantidad ya completa')
         toast.warning(`${detalle.codItem} ya tiene la cantidad completa (${cantidadActual}/${detalle.cantidadSolicitada}). Presione OK para confirmar.`)
         return prev // No cambiar estado
       }
@@ -229,13 +239,18 @@ export default function PickingPage() {
       const nuevaCantidadLocal = cantidadLocal + 1
       const nuevaCantidadTotal = cantidadBackend + nuevaCantidadLocal
 
+      console.log('[Picking Debug] nuevaCantidadLocal:', nuevaCantidadLocal)
+      console.log('[Picking Debug] nuevaCantidadTotal:', nuevaCantidadTotal)
+
       // Mostrar progreso
       toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
 
-      return {
+      const newState = {
         ...prev,
         [detalle.id]: nuevaCantidadLocal
       }
+      console.log('[Picking Debug] New state:', JSON.stringify(newState))
+      return newState
     })
 
     // Limpiar input
