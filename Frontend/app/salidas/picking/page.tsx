@@ -178,14 +178,14 @@ export default function PickingPage() {
 
   // Obtener cantidad pickeada (local + backend)
   const getCantidadPickeada = (detalle: DetalleSalida): number => {
-    const backendCantidad = detalle.cantidadPickeada || 0
+    const backendCantidad = Number(detalle.cantidadPickeada) || 0
     const localCantidad = localPickingProgress[detalle.id] || 0
     return backendCantidad + localCantidad
   }
 
   // Verificar si un detalle está completo
   const isDetalleCompleto = (detalle: DetalleSalida): boolean => {
-    return getCantidadPickeada(detalle) >= detalle.cantidadSolicitada ||
+    return getCantidadPickeada(detalle) >= Number(detalle.cantidadSolicitada) ||
       detalle.estado === EstadoDetalleSalida.PICKEADO
   }
 
@@ -219,19 +219,21 @@ export default function PickingPage() {
       console.log('[Picking Debug] detalle.id:', detalle.id)
       console.log('[Picking Debug] prev state:', JSON.stringify(prev))
 
-      const cantidadBackend = detalle.cantidadPickeada || 0
+      // IMPORTANTE: Convertir a números porque vienen como strings del backend
+      const cantidadBackend = Number(detalle.cantidadPickeada) || 0
       const cantidadLocal = prev[detalle.id] || 0
       const cantidadActual = cantidadBackend + cantidadLocal
+      const cantidadSolicitada = Number(detalle.cantidadSolicitada)
 
-      console.log('[Picking Debug] cantidadBackend:', cantidadBackend)
+      console.log('[Picking Debug] cantidadBackend:', cantidadBackend, typeof cantidadBackend)
       console.log('[Picking Debug] cantidadLocal:', cantidadLocal)
       console.log('[Picking Debug] cantidadActual:', cantidadActual)
-      console.log('[Picking Debug] cantidadSolicitada:', detalle.cantidadSolicitada)
+      console.log('[Picking Debug] cantidadSolicitada:', cantidadSolicitada)
 
       // Validar que no exceda la cantidad solicitada
-      if (cantidadActual >= detalle.cantidadSolicitada) {
+      if (cantidadActual >= cantidadSolicitada) {
         console.log('[Picking Debug] BLOCKED - cantidad ya completa')
-        toast.warning(`${detalle.codItem} ya tiene la cantidad completa (${cantidadActual}/${detalle.cantidadSolicitada}). Presione OK para confirmar.`)
+        toast.warning(`${detalle.codItem} ya tiene la cantidad completa (${cantidadActual}/${cantidadSolicitada}). Presione OK para confirmar.`)
         return prev // No cambiar estado
       }
 
@@ -243,7 +245,7 @@ export default function PickingPage() {
       console.log('[Picking Debug] nuevaCantidadTotal:', nuevaCantidadTotal)
 
       // Mostrar progreso
-      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
+      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${cantidadSolicitada} unidades`)
 
       const newState = {
         ...prev,
@@ -280,12 +282,14 @@ export default function PickingPage() {
 
     // Usar updater function para evitar stale closure
     setLocalPickingProgress(prev => {
-      const cantidadBackend = detalle.cantidadPickeada || 0
+      // IMPORTANTE: Convertir a números porque vienen como strings del backend
+      const cantidadBackend = Number(detalle.cantidadPickeada) || 0
       const cantidadLocal = prev[detalle.id] || 0
       const cantidadActual = cantidadBackend + cantidadLocal
+      const cantidadSolicitada = Number(detalle.cantidadSolicitada)
 
       // Validar que no exceda la cantidad solicitada
-      if (cantidadActual >= detalle.cantidadSolicitada) {
+      if (cantidadActual >= cantidadSolicitada) {
         toast.warning(`${detalle.codItem} ya tiene la cantidad completa. Presione OK para confirmar.`)
         return prev // No cambiar estado
       }
@@ -295,7 +299,7 @@ export default function PickingPage() {
       const nuevaCantidadTotal = cantidadBackend + nuevaCantidadLocal
 
       // Mostrar progreso
-      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${detalle.cantidadSolicitada} unidades`)
+      toast.success(`${detalle.codItem}: ${nuevaCantidadTotal}/${cantidadSolicitada} unidades`)
 
       return {
         ...prev,
