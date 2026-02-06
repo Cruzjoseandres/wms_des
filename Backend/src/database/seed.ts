@@ -623,59 +623,67 @@ async function seed() {
     // 5. STOCK INVENTARIO
     // =======================
     console.log('\n📊 [5/9] Creando stock de inventario...');
-    const existingStock = await stockRepo.count();
-    if (existingStock === 0) {
-        const stockData = [
-            { sku: 'FARM-001', ubicacion: 'A-01-01-01', cantidad: 100, estado: 'DISPONIBLE' },
-            { sku: 'FARM-002', ubicacion: 'A-01-01-02', cantidad: 50, estado: 'DISPONIBLE' },
-            { sku: 'FARM-003', ubicacion: 'A-01-02-01', cantidad: 75, estado: 'DISPONIBLE' },
-            { sku: 'ELEC-001', ubicacion: 'B-02-01-01', cantidad: 200, estado: 'DISPONIBLE' },
-            { sku: 'ELEC-002', ubicacion: 'B-02-01-02', cantidad: 100, estado: 'DISPONIBLE' },
-            { sku: 'ALIM-001', ubicacion: 'C-01-01-01', cantidad: 500, estado: 'DISPONIBLE' },
-            { sku: 'ALIM-002', ubicacion: 'C-01-01-02', cantidad: 300, estado: 'DISPONIBLE' },
-            { sku: 'ALIM-003', ubicacion: 'C-01-02-01', cantidad: 400, estado: 'BLOQUEADO' }, // Próximo a vencer
-            { sku: 'ALIM-004', ubicacion: 'C-01-02-02', cantidad: 600, estado: 'DISPONIBLE' },
-            { sku: 'PROD-001', ubicacion: 'D-01-01-01', cantidad: 50, estado: 'DISPONIBLE' },
-            { sku: 'PROD-002', ubicacion: 'D-01-01-02', cantidad: 15, estado: 'DISPONIBLE' },
-            { sku: 'LIMP-001', ubicacion: 'E-01-01-01', cantidad: 80, estado: 'DISPONIBLE' },
-            { sku: 'LIMP-002', ubicacion: 'E-01-01-02', cantidad: 120, estado: 'DISPONIBLE' },
-            { sku: 'OFIC-001', ubicacion: 'F-01-01-01', cantidad: 200, estado: 'DISPONIBLE' },
-            { sku: 'OFIC-002', ubicacion: 'F-01-01-02', cantidad: 100, estado: 'DISPONIBLE' },
-            // Plásticos - Stock inicial
-            { sku: 'PLAST-001', ubicacion: 'G-01-01-01', cantidad: 97, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-002', ubicacion: 'G-01-01-02', cantidad: 61, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-003', ubicacion: 'G-01-02-01', cantidad: 17, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-004', ubicacion: 'G-01-02-02', cantidad: 55, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-005', ubicacion: 'G-02-01-01', cantidad: 89, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-006', ubicacion: 'G-02-01-02', cantidad: 89, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-007', ubicacion: 'G-02-02-01', cantidad: 41, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-008', ubicacion: 'G-02-02-02', cantidad: 48, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-009', ubicacion: 'G-03-01-01', cantidad: 27, estado: 'DISPONIBLE' },
-            { sku: 'PLAST-010', ubicacion: 'G-03-01-02', cantidad: 52, estado: 'DISPONIBLE' },
-        ];
+    const stockData = [
+        { sku: 'FARM-001', ubicacion: 'A-01-01-01', cantidad: 100, estado: 'DISPONIBLE' },
+        { sku: 'FARM-002', ubicacion: 'A-01-01-02', cantidad: 50, estado: 'DISPONIBLE' },
+        { sku: 'FARM-003', ubicacion: 'A-01-02-01', cantidad: 75, estado: 'DISPONIBLE' },
+        { sku: 'ELEC-001', ubicacion: 'B-02-01-01', cantidad: 200, estado: 'DISPONIBLE' },
+        { sku: 'ELEC-002', ubicacion: 'B-02-01-02', cantidad: 100, estado: 'DISPONIBLE' },
+        { sku: 'ALIM-001', ubicacion: 'C-01-01-01', cantidad: 500, estado: 'DISPONIBLE' },
+        { sku: 'ALIM-002', ubicacion: 'C-01-01-02', cantidad: 300, estado: 'DISPONIBLE' },
+        { sku: 'ALIM-003', ubicacion: 'C-01-02-01', cantidad: 400, estado: 'BLOQUEADO' }, // Próximo a vencer
+        { sku: 'ALIM-004', ubicacion: 'C-01-02-02', cantidad: 600, estado: 'DISPONIBLE' },
+        { sku: 'PROD-001', ubicacion: 'D-01-01-01', cantidad: 50, estado: 'DISPONIBLE' },
+        { sku: 'PROD-002', ubicacion: 'D-01-01-02', cantidad: 15, estado: 'DISPONIBLE' },
+        { sku: 'LIMP-001', ubicacion: 'E-01-01-01', cantidad: 80, estado: 'DISPONIBLE' },
+        { sku: 'LIMP-002', ubicacion: 'E-01-01-02', cantidad: 120, estado: 'DISPONIBLE' },
+        { sku: 'OFIC-001', ubicacion: 'F-01-01-01', cantidad: 200, estado: 'DISPONIBLE' },
+        { sku: 'OFIC-002', ubicacion: 'F-01-01-02', cantidad: 100, estado: 'DISPONIBLE' },
+        // Plásticos - Stock inicial
+        { sku: 'PLAST-001', ubicacion: 'G-01-01-01', cantidad: 97, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-002', ubicacion: 'G-01-01-02', cantidad: 61, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-003', ubicacion: 'G-01-02-01', cantidad: 17, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-004', ubicacion: 'G-01-02-02', cantidad: 55, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-005', ubicacion: 'G-02-01-01', cantidad: 89, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-006', ubicacion: 'G-02-01-02', cantidad: 89, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-007', ubicacion: 'G-02-02-01', cantidad: 41, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-008', ubicacion: 'G-02-02-02', cantidad: 48, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-009', ubicacion: 'G-03-01-01', cantidad: 27, estado: 'DISPONIBLE' },
+        { sku: 'PLAST-010', ubicacion: 'G-03-01-02', cantidad: 52, estado: 'DISPONIBLE' },
+    ];
 
-        const itemsMap = new Map<string, Item>();
-        // Cargar items para buscar por código
-        const allItems = await itemRepo.find();
-        allItems.forEach(i => itemsMap.set(i.codigo, i));
+    const itemsMap = new Map<string, Item>();
+    // Cargar items para buscar por código
+    const allItems = await itemRepo.find();
+    allItems.forEach(i => itemsMap.set(i.codigo, i));
 
-        for (const data of stockData) {
-            const item = itemsMap.get(data.sku);
-            if (item) {
+    let stockCreados = 0;
+    let stockExistentes = 0;
+    for (const data of stockData) {
+        const item = itemsMap.get(data.sku);
+        if (item) {
+            // Verificar si YA existe stock para este item en esta ubicación
+            const existeStock = await stockRepo.findOne({
+                where: { item: { id: item.id }, ubicacion: data.ubicacion }
+            });
+
+            if (!existeStock) {
                 await stockRepo.save(stockRepo.create({
                     item: item,
                     ubicacion: data.ubicacion,
                     cantidad: data.cantidad,
                     estado: data.estado
                 }));
+                console.log(`  ✓ Stock creado: ${data.sku} en ${data.ubicacion} (${data.cantidad})`);
+                stockCreados++;
             } else {
-                console.log(`  ⚠ Item ${data.sku} no encontrado para stock seed`);
+                stockExistentes++;
             }
+        } else {
+            console.log(`  ⚠ Item ${data.sku} no encontrado para stock seed`);
         }
-        console.log(`  ✓ Creados ${stockData.length} registros de stock`);
-    } else {
-        console.log(`  → Ya existe stock (${existingStock} registros)`);
     }
+    console.log(`  ✓ Stock: ${stockCreados} nuevos, ${stockExistentes} ya existían`);
 
     // =======================
     // 6. INVENTARIOS
