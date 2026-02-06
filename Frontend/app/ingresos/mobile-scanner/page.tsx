@@ -24,6 +24,7 @@ import { EstadoDetalle, type OrdenMovil, type DetalleMovil } from "@/lib/models"
 import { EditDetalleModal } from "@/components/ingresos/edit-detalle-modal"
 import { ConfirmIngresoModal } from "@/components/ingresos/confirm-ingreso-modal"
 import { useScanDetection } from "@/hooks/use-scan-detection"
+import { MainLayout } from "@/components/layout/main-layout"
 
 // --- TYPES ---
 interface DetallePalet {
@@ -703,589 +704,593 @@ export default function MobileScannerPage() {
     // --- SEARCH VIEW ---
     if (step === "search") {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-start p-4 pt-12 space-y-6">
-                {/* Header */}
-                <div className="text-center space-y-3">
-                    <div className="bg-gradient-to-br from-orange-500 to-orange-600 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-orange-500/30">
-                        <ScanBarcode className="w-10 h-10 text-white" />
+            <MainLayout>
+                <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-start p-4 pt-12 space-y-6 -m-3 sm:-m-4 lg:-m-6">
+                    {/* Header */}
+                    <div className="text-center space-y-3">
+                        <div className="bg-gradient-to-br from-orange-500 to-orange-600 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-orange-500/30">
+                            <ScanBarcode className="w-10 h-10 text-white" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-white">Scanner WMS</h1>
+                        <p className="text-slate-400 text-sm">
+                            {workMode === "validation"
+                                ? "Validación de productos"
+                                : "Almacenamiento en ubicaciones"}
+                        </p>
                     </div>
-                    <h1 className="text-2xl font-bold text-white">Scanner WMS</h1>
-                    <p className="text-slate-400 text-sm">
-                        {workMode === "validation"
-                            ? "Validación de productos"
-                            : "Almacenamiento en ubicaciones"}
-                    </p>
-                </div>
 
-                {/* Mode Toggle */}
-                <div className="flex gap-2 bg-slate-800/50 p-1 rounded-xl">
-                    <Button
-                        variant="ghost"
-                        onClick={() => setWorkMode("validation")}
-                        className={cn(
-                            "px-6 h-10 rounded-lg transition-all",
-                            workMode === "validation"
-                                ? "bg-orange-600 text-white hover:bg-orange-600"
-                                : "text-slate-400 hover:text-white hover:bg-slate-700"
-                        )}
-                    >
-                        Validar
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        onClick={() => setWorkMode("storage")}
-                        className={cn(
-                            "px-6 h-10 rounded-lg transition-all",
-                            workMode === "storage"
-                                ? "bg-orange-600 text-white hover:bg-orange-600"
-                                : "text-slate-400 hover:text-white hover:bg-slate-700"
-                        )}
-                    >
-                        Almacenar
-                    </Button>
-                </div>
+                    {/* Mode Toggle */}
+                    <div className="flex gap-2 bg-slate-800/50 p-1 rounded-xl">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setWorkMode("validation")}
+                            className={cn(
+                                "px-6 h-10 rounded-lg transition-all",
+                                workMode === "validation"
+                                    ? "bg-orange-600 text-white hover:bg-orange-600"
+                                    : "text-slate-400 hover:text-white hover:bg-slate-700"
+                            )}
+                        >
+                            Validar
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => setWorkMode("storage")}
+                            className={cn(
+                                "px-6 h-10 rounded-lg transition-all",
+                                workMode === "storage"
+                                    ? "bg-orange-600 text-white hover:bg-orange-600"
+                                    : "text-slate-400 hover:text-white hover:bg-slate-700"
+                            )}
+                        >
+                            Almacenar
+                        </Button>
+                    </div>
 
-                {/* Zebra Scanner Active Indicator */}
-                <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 px-4 py-2 rounded-full">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                    <span className="text-blue-400 text-xs font-medium">Escáner Zebra Activo</span>
-                </div>
+                    {/* Zebra Scanner Active Indicator */}
+                    <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 px-4 py-2 rounded-full">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                        <span className="text-blue-400 text-xs font-medium">Escáner Zebra Activo</span>
+                    </div>
 
-                {/* Órdenes disponibles */}
-                <Card className="w-full max-w-md bg-slate-800/80 border-slate-700 shadow-xl">
-                    <CardContent className="pt-6 space-y-4">
-                        {isLoading ? (
-                            <div className="flex flex-col items-center justify-center py-8 gap-3">
-                                <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-                                <span className="text-slate-400 text-sm">Cargando órdenes...</span>
-                            </div>
-                        ) : ordenes.length === 0 ? (
-                            <div className="text-center py-8">
-                                <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
-                                    <Box className="w-8 h-8 text-slate-500" />
+                    {/* Órdenes disponibles */}
+                    <Card className="w-full max-w-md bg-slate-800/80 border-slate-700 shadow-xl">
+                        <CardContent className="pt-6 space-y-4">
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                                    <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                                    <span className="text-slate-400 text-sm">Cargando órdenes...</span>
                                 </div>
-                                <p className="text-slate-400">
-                                    No hay órdenes {workMode === "validation" ? "por validar" : "por almacenar"}
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-medium text-slate-300">
-                                        Órdenes disponibles
-                                    </label>
-                                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
-                                        {ordenes.length}
-                                    </Badge>
+                            ) : ordenes.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
+                                        <Box className="w-8 h-8 text-slate-500" />
+                                    </div>
+                                    <p className="text-slate-400">
+                                        No hay órdenes {workMode === "validation" ? "por validar" : "por almacenar"}
+                                    </p>
                                 </div>
-                                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                                    {ordenes.slice(0, 5).map(orden => (
-                                        <button
-                                            key={orden.id}
-                                            className="w-full p-3 text-left bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-orange-500/50 rounded-xl transition-all group"
-                                            onClick={() => {
-                                                setCurrentDoc(mapOrdenToDocumento(orden))
-                                                setStep("work")
-                                            }}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-mono font-bold text-white group-hover:text-orange-400 transition-colors">
-                                                    {orden.nroDocumento}
-                                                </span>
-                                                <ChevronDown className="w-4 h-4 text-slate-500 -rotate-90" />
-                                            </div>
-                                            <div className="text-xs text-slate-400 mt-1">
-                                                {orden.detalles.length} items • {orden.almacen.descripcion}
-                                            </div>
-                                        </button>
-                                    ))}
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-medium text-slate-300">
+                                            Órdenes disponibles
+                                        </label>
+                                        <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
+                                            {ordenes.length}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                        {ordenes.slice(0, 5).map(orden => (
+                                            <button
+                                                key={orden.id}
+                                                className="w-full p-3 text-left bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-orange-500/50 rounded-xl transition-all group"
+                                                onClick={() => {
+                                                    setCurrentDoc(mapOrdenToDocumento(orden))
+                                                    setStep("work")
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-mono font-bold text-white group-hover:text-orange-400 transition-colors">
+                                                        {orden.nroDocumento}
+                                                    </span>
+                                                    <ChevronDown className="w-4 h-4 text-slate-500 -rotate-90" />
+                                                </div>
+                                                <div className="text-xs text-slate-400 mt-1">
+                                                    {orden.detalles.length} items • {orden.almacen.descripcion}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        <div className="border-t border-slate-700 pt-4 space-y-3">
-                            <label className="text-sm font-medium text-slate-300">Buscar por número</label>
-                            <div className="flex gap-2">
-                                <Input
-                                    value={docQuery}
-                                    onChange={(e) => setDocQuery(e.target.value)}
-                                    onKeyDown={(e) => handleInputKeyDown(e, "doc")}
-                                    placeholder="Nro documento..."
-                                    className="h-12 text-lg bg-slate-700 border-slate-600 text-white placeholder:text-slate-500 focus-visible:ring-orange-500"
-                                />
+                            <div className="border-t border-slate-700 pt-4 space-y-3">
+                                <label className="text-sm font-medium text-slate-300">Buscar por número</label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={docQuery}
+                                        onChange={(e) => setDocQuery(e.target.value)}
+                                        onKeyDown={(e) => handleInputKeyDown(e, "doc")}
+                                        placeholder="Nro documento..."
+                                        className="h-12 text-lg bg-slate-700 border-slate-600 text-white placeholder:text-slate-500 focus-visible:ring-orange-500"
+                                    />
+                                    <Button
+                                        className="h-12 w-12 shrink-0 bg-orange-600 hover:bg-orange-700"
+                                        onClick={() => startScanner("doc")}
+                                        title="Cámara"
+                                    >
+                                        <ScanBarcode className="w-6 h-6" />
+                                    </Button>
+                                </div>
                                 <Button
-                                    className="h-12 w-12 shrink-0 bg-orange-600 hover:bg-orange-700"
-                                    onClick={() => startScanner("doc")}
-                                    title="Cámara"
+                                    className="w-full h-12 text-base bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 font-semibold shadow-lg shadow-orange-500/20"
+                                    onClick={() => handleSearchDoc()}
+                                    disabled={isLoading}
                                 >
-                                    <ScanBarcode className="w-6 h-6" />
+                                    <Search className="w-5 h-5 mr-2" />
+                                    BUSCAR DOCUMENTO
                                 </Button>
                             </div>
-                            <Button
-                                className="w-full h-12 text-base bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 font-semibold shadow-lg shadow-orange-500/20"
-                                onClick={() => handleSearchDoc()}
-                                disabled={isLoading}
-                            >
-                                <Search className="w-5 h-5 mr-2" />
-                                BUSCAR DOCUMENTO
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
 
-                {/* Footer hint */}
-                <p className="text-slate-500 text-xs text-center max-w-xs">
-                    Escanea el código de barras del documento o selecciona uno de la lista
-                </p>
-            </div>
+                    {/* Footer hint */}
+                    <p className="text-slate-500 text-xs text-center max-w-xs">
+                        Escanea el código de barras del documento o selecciona uno de la lista
+                    </p>
+                </div>
+            </MainLayout>
         )
     }
 
     // --- WORK VIEW ---
     return (
-        <>
-            <div className="min-h-screen bg-slate-100 flex flex-col">
-                {/* HEADER */}
-                <div className="bg-slate-900 text-white px-4 py-3 shadow-md sticky top-0 z-10">
-                    <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2" onClick={() => setStep("search")}>
-                            <ArrowLeft className="w-5 h-5 text-slate-400 cursor-pointer" />
-                            <h2 className="font-bold text-lg tracking-wide">
-                                {workMode === "validation" ? "VALIDACIÓN" : "ALM. EN UBICACIONES"}
-                            </h2>
+        <MainLayout>
+            <>
+                <div className="min-h-[calc(100vh-80px)] bg-slate-100 flex flex-col -m-3 sm:-m-4 lg:-m-6">
+                    {/* HEADER */}
+                    <div className="bg-slate-900 text-white px-4 py-3 shadow-md sticky top-0 z-10">
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="flex items-center gap-2" onClick={() => setStep("search")}>
+                                <ArrowLeft className="w-5 h-5 text-slate-400 cursor-pointer" />
+                                <h2 className="font-bold text-lg tracking-wide">
+                                    {workMode === "validation" ? "VALIDACIÓN" : "ALM. EN UBICACIONES"}
+                                </h2>
+                            </div>
+                            <div className="flex gap-1">
+                                <Button
+                                    size="sm"
+                                    variant={workMode === "validation" ? "default" : "secondary"}
+                                    className={cn("h-7 text-xs", workMode === "validation" ? "bg-orange-600" : "bg-slate-700")}
+                                    onClick={() => handleModeSwitch("validation")}
+                                >
+                                    Validar
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant={workMode === "storage" ? "default" : "secondary"}
+                                    className={cn("h-7 text-xs", workMode === "storage" ? "bg-orange-600" : "bg-slate-700")}
+                                    onClick={() => handleModeSwitch("storage")}
+                                >
+                                    Almacen
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex gap-1">
-                            <Button
-                                size="sm"
-                                variant={workMode === "validation" ? "default" : "secondary"}
-                                className={cn("h-7 text-xs", workMode === "validation" ? "bg-orange-600" : "bg-slate-700")}
-                                onClick={() => handleModeSwitch("validation")}
-                            >
-                                Validar
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={workMode === "storage" ? "default" : "secondary"}
-                                className={cn("h-7 text-xs", workMode === "storage" ? "bg-orange-600" : "bg-slate-700")}
-                                onClick={() => handleModeSwitch("storage")}
-                            >
-                                Almacen
-                            </Button>
+
+                        {/* Doc Info */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-300 border-t border-slate-700 pt-2">
+                            <div>
+                                <span className="text-slate-500 block">Nro. Doc:</span>
+                                <span className="text-white font-mono">{currentDoc?.nroDocumento}</span>
+                            </div>
+                            <div>
+                                <span className="text-slate-500 block">Estado:</span>
+                                <span className="text-orange-400">{currentDoc?.estadoGlobal}</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Doc Info */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-300 border-t border-slate-700 pt-2">
-                        <div>
-                            <span className="text-slate-500 block">Nro. Doc:</span>
-                            <span className="text-white font-mono">{currentDoc?.nroDocumento}</span>
-                        </div>
-                        <div>
-                            <span className="text-slate-500 block">Estado:</span>
-                            <span className="text-orange-400">{currentDoc?.estadoGlobal}</span>
-                        </div>
-                    </div>
-                </div>
+                    <div className="flex-1 p-3 space-y-4 max-w-md mx-auto w-full">
+                        {/* INPUT SECTIONS */}
+                        <Card className="shadow-md border-0 bg-white">
+                            <CardContent className="p-4 space-y-4">
+                                {/* Location Input (Storage Mode) */}
+                                {workMode === "storage" && (
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-2">
+                                            <span>📍 Escanear ubicación</span>
+                                            {inputLocation && (
+                                                <span className="text-green-600 font-mono bg-green-50 px-2 py-0.5 rounded text-xs">
+                                                    {inputLocation}
+                                                </span>
+                                            )}
+                                        </label>
 
-                <div className="flex-1 p-3 space-y-4 max-w-md mx-auto w-full">
-                    {/* INPUT SECTIONS */}
-                    <Card className="shadow-md border-0 bg-white">
-                        <CardContent className="p-4 space-y-4">
-                            {/* Location Input (Storage Mode) */}
-                            {workMode === "storage" && (
+                                        {/* Zebra Scanner for Location */}
+                                        <div
+                                            className="relative bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 rounded-xl p-3 shadow-lg border border-orange-400/30 cursor-pointer hover:from-orange-400 hover:via-orange-500 hover:to-orange-600 transition-all duration-200"
+                                            onClick={() => toast.info("Escanee la etiqueta de ubicación con el Zebra")}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-white/20 rounded-lg p-2.5 backdrop-blur-sm">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-white">
+                                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                                        <circle cx="12" cy="10" r="3" />
+                                                    </svg>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="text-white font-semibold">Escanear Ubicación</div>
+                                                    <div className="text-orange-200 text-xs">Apunte a la etiqueta del rack</div>
+                                                </div>
+                                                <div className="relative">
+                                                    <span className="absolute inline-flex h-3 w-3 animate-ping rounded-full bg-green-400 opacity-50"></span>
+                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-white"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Manual Input */}
+                                        <div className="flex gap-2 items-center">
+                                            <div className="relative flex-1">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">📍</span>
+                                                <Input
+                                                    className="pl-9 h-10 text-base border-slate-200 focus-visible:ring-orange-500 font-mono bg-slate-50"
+                                                    placeholder="Ej: A-01-01-01"
+                                                    value={inputLocation}
+                                                    onChange={(e) => setInputLocation(e.target.value)}
+                                                    onKeyDown={(e) => handleInputKeyDown(e, "location")}
+                                                />
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                className="h-10 px-3 shrink-0 border-slate-300 text-slate-600 hover:text-orange-600 hover:border-orange-500 hover:bg-orange-50"
+                                                onClick={() => startScanner("location")}
+                                                title="Cámara"
+                                            >
+                                                <ScanBarcode className="w-5 h-5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Pallet/Item Input */}
                                 <div className="space-y-2">
-                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-2">
-                                        <span>📍 Escanear ubicación</span>
-                                        {inputLocation && (
-                                            <span className="text-green-600 font-mono bg-green-50 px-2 py-0.5 rounded text-xs">
-                                                {inputLocation}
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                            {workMode === "validation" ? "Escanear producto" : "Código de producto"}
+                                        </label>
+                                        {/* Zebra Status Indicator */}
+                                        <div className="flex items-center gap-1.5 text-xs">
+                                            <span className="relative flex h-2.5 w-2.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
                                             </span>
-                                        )}
-                                    </label>
+                                            <span className="text-green-600 font-medium">Zebra Activo</span>
+                                        </div>
+                                    </div>
 
-                                    {/* Zebra Scanner for Location */}
+                                    {/* Zebra Scanner Primary Button */}
                                     <div
-                                        className="relative bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 rounded-xl p-3 shadow-lg border border-orange-400/30 cursor-pointer hover:from-orange-400 hover:via-orange-500 hover:to-orange-600 transition-all duration-200"
-                                        onClick={() => toast.info("Escanee la etiqueta de ubicación con el Zebra")}
+                                        className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl p-4 shadow-lg border border-blue-500/30 cursor-pointer hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 transition-all duration-200"
+                                        onClick={() => toast.info("Escáner Zebra listo - Presione el gatillo del dispositivo")}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-white/20 rounded-lg p-2.5 backdrop-blur-sm">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-white">
-                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                                    <circle cx="12" cy="10" r="3" />
+                                        <div className="flex items-center gap-4">
+                                            {/* Scanner Icon */}
+                                            <div className="bg-white/20 rounded-lg p-3 backdrop-blur-sm">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-8 h-8 text-white">
+                                                    <path d="M3 7V5c0-1.1.9-2 2-2h2" />
+                                                    <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
+                                                    <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
+                                                    <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
+                                                    <path d="M7 8h10" />
+                                                    <path d="M7 12h10" />
+                                                    <path d="M7 16h6" />
                                                 </svg>
                                             </div>
+                                            {/* Text Content */}
                                             <div className="flex-1">
-                                                <div className="text-white font-semibold">Escanear Ubicación</div>
-                                                <div className="text-orange-200 text-xs">Apunte a la etiqueta del rack</div>
+                                                <div className="text-white font-bold text-lg">Escáner Zebra</div>
+                                                <div className="text-blue-200 text-sm">Presione el gatillo para escanear</div>
                                             </div>
-                                            <div className="relative">
-                                                <span className="absolute inline-flex h-3 w-3 animate-ping rounded-full bg-green-400 opacity-50"></span>
-                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-white"></span>
+                                            {/* Active Indicator */}
+                                            <div className="flex flex-col items-center gap-1">
+                                                <div className="relative">
+                                                    <span className="absolute inline-flex h-4 w-4 animate-ping rounded-full bg-green-400 opacity-50"></span>
+                                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-white"></span>
+                                                </div>
+                                                <span className="text-[10px] text-green-300 font-medium uppercase">Listo</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Manual Input */}
+                                    {/* Alternative Input Methods */}
                                     <div className="flex gap-2 items-center">
                                         <div className="relative flex-1">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">📍</span>
+                                            <Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                                             <Input
-                                                className="pl-9 h-10 text-base border-slate-200 focus-visible:ring-orange-500 font-mono bg-slate-50"
-                                                placeholder="Ej: A-01-01-01"
-                                                value={inputLocation}
-                                                onChange={(e) => setInputLocation(e.target.value)}
-                                                onKeyDown={(e) => handleInputKeyDown(e, "location")}
+                                                className="pl-9 h-11 text-base border-slate-200 focus-visible:ring-blue-500 font-mono bg-slate-50"
+                                                placeholder="O ingrese código manual..."
+                                                value={inputPalet}
+                                                onChange={(e) => setInputPalet(e.target.value)}
+                                                onKeyDown={(e) => handleInputKeyDown(e, "palet")}
                                             />
                                         </div>
+
                                         <Button
                                             variant="outline"
-                                            className="h-10 px-3 shrink-0 border-slate-300 text-slate-600 hover:text-orange-600 hover:border-orange-500 hover:bg-orange-50"
-                                            onClick={() => startScanner("location")}
-                                            title="Cámara"
+                                            className="h-11 px-3 shrink-0 border-slate-300 text-slate-600 hover:text-blue-600 hover:border-blue-500 hover:bg-blue-50"
+                                            onClick={inputPalet && !scannedPaletData ? handleScanPalet : () => startScanner("palet")}
+                                            title={inputPalet ? "Buscar" : "Cámara"}
                                         >
-                                            <ScanBarcode className="w-5 h-5" />
+                                            {inputPalet && !scannedPaletData ? (
+                                                <Search className="w-5 h-5" />
+                                            ) : (
+                                                <ScanBarcode className="w-5 h-5" />
+                                            )}
                                         </Button>
                                     </div>
                                 </div>
-                            )}
 
-                            {/* Pallet/Item Input */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                                        {workMode === "validation" ? "Escanear producto" : "Código de producto"}
-                                    </label>
-                                    {/* Zebra Status Indicator */}
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="relative flex h-2.5 w-2.5">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                                        </span>
-                                        <span className="text-green-600 font-medium">Zebra Activo</span>
-                                    </div>
-                                </div>
-
-                                {/* Zebra Scanner Primary Button */}
-                                <div
-                                    className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl p-4 shadow-lg border border-blue-500/30 cursor-pointer hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 transition-all duration-200"
-                                    onClick={() => toast.info("Escáner Zebra listo - Presione el gatillo del dispositivo")}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        {/* Scanner Icon */}
-                                        <div className="bg-white/20 rounded-lg p-3 backdrop-blur-sm">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-8 h-8 text-white">
-                                                <path d="M3 7V5c0-1.1.9-2 2-2h2" />
-                                                <path d="M17 3h2c1.1 0 2 .9 2 2v2" />
-                                                <path d="M21 17v2c0 1.1-.9 2-2 2h-2" />
-                                                <path d="M7 21H5c-1.1 0-2-.9-2-2v-2" />
-                                                <path d="M7 8h10" />
-                                                <path d="M7 12h10" />
-                                                <path d="M7 16h6" />
-                                            </svg>
-                                        </div>
-                                        {/* Text Content */}
-                                        <div className="flex-1">
-                                            <div className="text-white font-bold text-lg">Escáner Zebra</div>
-                                            <div className="text-blue-200 text-sm">Presione el gatillo para escanear</div>
-                                        </div>
-                                        {/* Active Indicator */}
-                                        <div className="flex flex-col items-center gap-1">
-                                            <div className="relative">
-                                                <span className="absolute inline-flex h-4 w-4 animate-ping rounded-full bg-green-400 opacity-50"></span>
-                                                <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-white"></span>
+                                {/* Scanned Item Details - Enhanced Card */}
+                                {scannedPaletData ? (
+                                    <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200 shadow-sm space-y-3">
+                                        {/* Product Info Header */}
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <div className="text-xs text-slate-500 uppercase tracking-wide">Producto seleccionado</div>
+                                                <div className="font-bold text-lg text-slate-800">{scannedPaletData.descripcion || scannedPaletData.itemCode}</div>
+                                                <div className="text-sm text-slate-500 font-mono">{scannedPaletData.itemCode}</div>
                                             </div>
-                                            <span className="text-[10px] text-green-300 font-medium uppercase">Listo</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Alternative Input Methods */}
-                                <div className="flex gap-2 items-center">
-                                    <div className="relative flex-1">
-                                        <Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                                        <Input
-                                            className="pl-9 h-11 text-base border-slate-200 focus-visible:ring-blue-500 font-mono bg-slate-50"
-                                            placeholder="O ingrese código manual..."
-                                            value={inputPalet}
-                                            onChange={(e) => setInputPalet(e.target.value)}
-                                            onKeyDown={(e) => handleInputKeyDown(e, "palet")}
-                                        />
-                                    </div>
-
-                                    <Button
-                                        variant="outline"
-                                        className="h-11 px-3 shrink-0 border-slate-300 text-slate-600 hover:text-blue-600 hover:border-blue-500 hover:bg-blue-50"
-                                        onClick={inputPalet && !scannedPaletData ? handleScanPalet : () => startScanner("palet")}
-                                        title={inputPalet ? "Buscar" : "Cámara"}
-                                    >
-                                        {inputPalet && !scannedPaletData ? (
-                                            <Search className="w-5 h-5" />
-                                        ) : (
-                                            <ScanBarcode className="w-5 h-5" />
-                                        )}
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* Scanned Item Details - Enhanced Card */}
-                            {scannedPaletData ? (
-                                <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200 shadow-sm space-y-3">
-                                    {/* Product Info Header */}
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <div className="text-xs text-slate-500 uppercase tracking-wide">Producto seleccionado</div>
-                                            <div className="font-bold text-lg text-slate-800">{scannedPaletData.descripcion || scannedPaletData.itemCode}</div>
-                                            <div className="text-sm text-slate-500 font-mono">{scannedPaletData.itemCode}</div>
-                                        </div>
-                                        <div className={cn(
-                                            "px-3 py-1 rounded-full text-xs font-bold uppercase",
-                                            scannedPaletData.estado === "Validado" ? "bg-green-100 text-green-700" :
-                                                scannedPaletData.estado === "Almacenado" ? "bg-blue-100 text-blue-700" :
-                                                    "bg-orange-100 text-orange-700"
-                                        )}>
-                                            {scannedPaletData.estado}
-                                        </div>
-                                    </div>
-
-                                    {/* Progress Section */}
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-600">Progreso de escaneo</span>
-                                            <span className="font-bold text-slate-800">
-                                                {scanCounts[scannedPaletData.itemCode] || 0} / {scannedPaletData.cantidadEsperada}
-                                            </span>
-                                        </div>
-                                        {/* Progress Bar */}
-                                        <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                                            <div
-                                                className={cn(
-                                                    "h-full rounded-full transition-all duration-300",
-                                                    (scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada
-                                                        ? "bg-gradient-to-r from-green-500 to-green-400"
-                                                        : "bg-gradient-to-r from-blue-500 to-blue-400"
-                                                )}
-                                                style={{
-                                                    width: `${Math.min(100, ((scanCounts[scannedPaletData.itemCode] || 0) / scannedPaletData.cantidadEsperada) * 100)}%`
-                                                }}
-                                            />
-                                        </div>
-                                        {(scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada && (
-                                            <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
-                                                <CheckCircle2 className="w-4 h-4" />
-                                                <span>Cantidad completa - Listo para validar</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Quick Stats */}
-                                    <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-200">
-                                        <div className="text-center">
-                                            <div className="text-2xl font-bold text-slate-700">{scannedPaletData.cantidadEsperada}</div>
-                                            <div className="text-[10px] text-slate-500 uppercase">Esperado</div>
-                                        </div>
-                                        <div className="text-center border-x border-slate-200">
-                                            <div className="text-2xl font-bold text-blue-600">{scanCounts[scannedPaletData.itemCode] || 0}</div>
-                                            <div className="text-[10px] text-slate-500 uppercase">Escaneado</div>
-                                        </div>
-                                        <div className="text-center">
                                             <div className={cn(
-                                                "text-2xl font-bold",
-                                                (scannedPaletData.cantidadEsperada - (scanCounts[scannedPaletData.itemCode] || 0)) <= 0
-                                                    ? "text-green-600" : "text-orange-500"
+                                                "px-3 py-1 rounded-full text-xs font-bold uppercase",
+                                                scannedPaletData.estado === "Validado" ? "bg-green-100 text-green-700" :
+                                                    scannedPaletData.estado === "Almacenado" ? "bg-blue-100 text-blue-700" :
+                                                        "bg-orange-100 text-orange-700"
                                             )}>
-                                                {Math.max(0, scannedPaletData.cantidadEsperada - (scanCounts[scannedPaletData.itemCode] || 0))}
+                                                {scannedPaletData.estado}
                                             </div>
-                                            <div className="text-[10px] text-slate-500 uppercase">Faltante</div>
+                                        </div>
+
+                                        {/* Progress Section */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-slate-600">Progreso de escaneo</span>
+                                                <span className="font-bold text-slate-800">
+                                                    {scanCounts[scannedPaletData.itemCode] || 0} / {scannedPaletData.cantidadEsperada}
+                                                </span>
+                                            </div>
+                                            {/* Progress Bar */}
+                                            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                                                <div
+                                                    className={cn(
+                                                        "h-full rounded-full transition-all duration-300",
+                                                        (scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada
+                                                            ? "bg-gradient-to-r from-green-500 to-green-400"
+                                                            : "bg-gradient-to-r from-blue-500 to-blue-400"
+                                                    )}
+                                                    style={{
+                                                        width: `${Math.min(100, ((scanCounts[scannedPaletData.itemCode] || 0) / scannedPaletData.cantidadEsperada) * 100)}%`
+                                                    }}
+                                                />
+                                            </div>
+                                            {(scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada && (
+                                                <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    <span>Cantidad completa - Listo para validar</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Quick Stats */}
+                                        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-200">
+                                            <div className="text-center">
+                                                <div className="text-2xl font-bold text-slate-700">{scannedPaletData.cantidadEsperada}</div>
+                                                <div className="text-[10px] text-slate-500 uppercase">Esperado</div>
+                                            </div>
+                                            <div className="text-center border-x border-slate-200">
+                                                <div className="text-2xl font-bold text-blue-600">{scanCounts[scannedPaletData.itemCode] || 0}</div>
+                                                <div className="text-[10px] text-slate-500 uppercase">Escaneado</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className={cn(
+                                                    "text-2xl font-bold",
+                                                    (scannedPaletData.cantidadEsperada - (scanCounts[scannedPaletData.itemCode] || 0)) <= 0
+                                                        ? "text-green-600" : "text-orange-500"
+                                                )}>
+                                                    {Math.max(0, scannedPaletData.cantidadEsperada - (scanCounts[scannedPaletData.itemCode] || 0))}
+                                                </div>
+                                                <div className="text-[10px] text-slate-500 uppercase">Faltante</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="bg-slate-50 rounded-xl p-6 border border-dashed border-slate-300 text-center">
-                                    <Box className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                                    <div className="text-slate-500 text-sm">Escanee un producto para comenzar</div>
-                                    <div className="text-slate-400 text-xs mt-1">Use el escáner Zebra o la cámara</div>
-                                </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="space-y-3 pt-2">
-                                {workMode === "validation" ? (
-                                    <>
-                                        {/* Validate Button */}
-                                        {scannedPaletData && scannedPaletData.estadoBackend === EstadoDetalle.PENDIENTE && (
-                                            <Button
-                                                className={cn(
-                                                    "w-full h-14 font-bold shadow-lg text-white transition-all",
-                                                    (scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada
-                                                        ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 ring-2 ring-green-300 ring-offset-2 animate-pulse"
-                                                        : "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400"
-                                                )}
-                                                disabled={!inputPalet || processingAction || (scanCounts[scannedPaletData?.itemCode || ""] || 0) === 0}
-                                                onClick={() => {
-                                                    const count = scanCounts[scannedPaletData.itemCode] || 0
-                                                    if (count > 0) {
-                                                        handleValidarProducto(scannedPaletData, count)
-                                                    } else {
-                                                        toast.warning("Escanee al menos un producto primero")
-                                                    }
-                                                }}
-                                            >
-                                                {processingAction ? <Loader2 className="animate-spin" /> : (
-                                                    <div className="flex items-center gap-2">
-                                                        <CheckCircle2 className="w-6 h-6" />
-                                                        <span>VALIDAR ({scanCounts[scannedPaletData?.itemCode || ""] || 0} unidades)</span>
-                                                    </div>
-                                                )}
-                                            </Button>
-                                        )}
-                                        {/* Report Incident Button */}
-                                        <Button
-                                            variant="outline"
-                                            className="w-full h-11 font-medium border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                                            disabled={!inputPalet || processingAction}
-                                            onClick={handleReport}
-                                        >
-                                            <span className="text-red-500">⚠️</span>
-                                            <span className="ml-2">Reportar Incidencia</span>
-                                        </Button>
-                                    </>
                                 ) : (
-                                    <Button
-                                        className="w-full h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
-                                        disabled={!scannedPaletData || !inputLocation || processingAction}
-                                        onClick={() => {
-                                            if (scannedPaletData && inputLocation) {
-                                                handleAlmacenarProducto(scannedPaletData, inputLocation)
-                                            }
-                                        }}
-                                    >
-                                        {processingAction ? <Loader2 className="animate-spin" /> : (
-                                            <>
-                                                <Package className="w-5 h-5 mr-2" />
-                                                ALMACENAR EN {inputLocation || "..."}                                            </>
-                                        )}
-                                    </Button>
+                                    <div className="bg-slate-50 rounded-xl p-6 border border-dashed border-slate-300 text-center">
+                                        <Box className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                                        <div className="text-slate-500 text-sm">Escanee un producto para comenzar</div>
+                                        <div className="text-slate-400 text-xs mt-1">Use el escáner Zebra o la cámara</div>
+                                    </div>
                                 )}
-                            </div>
-                        </CardContent>
-                    </Card >
 
-                    {/* LIST SECTION */}
-                    < div className="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200" >
-                        <button
-                            className="w-full bg-slate-100 p-3 flex justify-between items-center text-sm font-semibold text-slate-700"
-                            onClick={() => setShowPendingList(!showPendingList)}
-                        >
-                            <span>
-                                {workMode === "validation" ? "Items Pendientes" : "Items por Almacenar"}
-                                <Badge variant="secondary" className="ml-2 bg-white">{getFilteredPalets().length}</Badge>
-                            </span>
-                            {showPendingList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-
-                        {
-                            showPendingList && (
-                                <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
-                                    {getFilteredPalets().length === 0 ? (
-                                        <div className="p-4 text-center text-sm text-slate-400">
-                                            {workMode === "validation"
-                                                ? "Todos los items han sido validados."
-                                                : "No hay items validados pendientes de ubicación."}
-                                        </div>
-                                    ) : (
-                                        getFilteredPalets().map((p) => (
-                                            <div
-                                                key={p.id}
-                                                className="grid grid-cols-3 text-xs p-3 hover:bg-slate-50 cursor-pointer"
-                                                onClick={() => {
-                                                    setInputPalet(p.codigo)
-                                                    setScannedPaletData(p)
-                                                }}
+                                {/* Action Buttons */}
+                                <div className="space-y-3 pt-2">
+                                    {workMode === "validation" ? (
+                                        <>
+                                            {/* Validate Button */}
+                                            {scannedPaletData && scannedPaletData.estadoBackend === EstadoDetalle.PENDIENTE && (
+                                                <Button
+                                                    className={cn(
+                                                        "w-full h-14 font-bold shadow-lg text-white transition-all",
+                                                        (scanCounts[scannedPaletData.itemCode] || 0) >= scannedPaletData.cantidadEsperada
+                                                            ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 ring-2 ring-green-300 ring-offset-2 animate-pulse"
+                                                            : "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400"
+                                                    )}
+                                                    disabled={!inputPalet || processingAction || (scanCounts[scannedPaletData?.itemCode || ""] || 0) === 0}
+                                                    onClick={() => {
+                                                        const count = scanCounts[scannedPaletData.itemCode] || 0
+                                                        if (count > 0) {
+                                                            handleValidarProducto(scannedPaletData, count)
+                                                        } else {
+                                                            toast.warning("Escanee al menos un producto primero")
+                                                        }
+                                                    }}
+                                                >
+                                                    {processingAction ? <Loader2 className="animate-spin" /> : (
+                                                        <div className="flex items-center gap-2">
+                                                            <CheckCircle2 className="w-6 h-6" />
+                                                            <span>VALIDAR ({scanCounts[scannedPaletData?.itemCode || ""] || 0} unidades)</span>
+                                                        </div>
+                                                    )}
+                                                </Button>
+                                            )}
+                                            {/* Report Incident Button */}
+                                            <Button
+                                                variant="outline"
+                                                className="w-full h-11 font-medium border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                                                disabled={!inputPalet || processingAction}
+                                                onClick={handleReport}
                                             >
-                                                <div className="font-semibold text-slate-600 flex items-center">
-                                                    {workMode === "validation"
-                                                        ? <span className="text-amber-600">{p.estado}</span>
-                                                        : <span className="text-green-600 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1" /> OK</span>
-                                                    }
-                                                </div>
-                                                <div className="truncate text-slate-500">{p.itemCode}</div>
-                                                <div className="text-right font-mono font-medium text-slate-800">{p.cantidad}</div>
-                                            </div>
-                                        ))
+                                                <span className="text-red-500">⚠️</span>
+                                                <span className="ml-2">Reportar Incidencia</span>
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <Button
+                                            className="w-full h-12 font-bold bg-orange-500 hover:bg-orange-600 shadow-md text-white"
+                                            disabled={!scannedPaletData || !inputLocation || processingAction}
+                                            onClick={() => {
+                                                if (scannedPaletData && inputLocation) {
+                                                    handleAlmacenarProducto(scannedPaletData, inputLocation)
+                                                }
+                                            }}
+                                        >
+                                            {processingAction ? <Loader2 className="animate-spin" /> : (
+                                                <>
+                                                    <Package className="w-5 h-5 mr-2" />
+                                                    ALMACENAR EN {inputLocation || "..."}                                            </>
+                                            )}
+                                        </Button>
                                     )}
                                 </div>
-                            )
-                        }
+                            </CardContent>
+                        </Card >
+
+                        {/* LIST SECTION */}
+                        < div className="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200" >
+                            <button
+                                className="w-full bg-slate-100 p-3 flex justify-between items-center text-sm font-semibold text-slate-700"
+                                onClick={() => setShowPendingList(!showPendingList)}
+                            >
+                                <span>
+                                    {workMode === "validation" ? "Items Pendientes" : "Items por Almacenar"}
+                                    <Badge variant="secondary" className="ml-2 bg-white">{getFilteredPalets().length}</Badge>
+                                </span>
+                                {showPendingList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+
+                            {
+                                showPendingList && (
+                                    <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                                        {getFilteredPalets().length === 0 ? (
+                                            <div className="p-4 text-center text-sm text-slate-400">
+                                                {workMode === "validation"
+                                                    ? "Todos los items han sido validados."
+                                                    : "No hay items validados pendientes de ubicación."}
+                                            </div>
+                                        ) : (
+                                            getFilteredPalets().map((p) => (
+                                                <div
+                                                    key={p.id}
+                                                    className="grid grid-cols-3 text-xs p-3 hover:bg-slate-50 cursor-pointer"
+                                                    onClick={() => {
+                                                        setInputPalet(p.codigo)
+                                                        setScannedPaletData(p)
+                                                    }}
+                                                >
+                                                    <div className="font-semibold text-slate-600 flex items-center">
+                                                        {workMode === "validation"
+                                                            ? <span className="text-amber-600">{p.estado}</span>
+                                                            : <span className="text-green-600 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1" /> OK</span>
+                                                        }
+                                                    </div>
+                                                    <div className="truncate text-slate-500">{p.itemCode}</div>
+                                                    <div className="text-right font-mono font-medium text-slate-800">{p.cantidad}</div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )
+                            }
+                        </div >
+
+                        {/* Finalize Button - visible when at least one scan */}
+                        {Object.keys(scanCounts).length > 0 && (
+                            <Button
+                                className="w-full h-14 font-bold text-lg bg-green-600 hover:bg-green-700 shadow-lg text-white"
+                                onClick={() => setShowConfirmModal(true)}
+                            >
+                                <CheckCircle2 className="w-5 h-5 mr-2" />
+                                FINALIZAR INGRESO ({Object.values(scanCounts).reduce((a, b) => a + b, 0)} items)
+                            </Button>
+                        )}
                     </div >
-
-                    {/* Finalize Button - visible when at least one scan */}
-                    {Object.keys(scanCounts).length > 0 && (
-                        <Button
-                            className="w-full h-14 font-bold text-lg bg-green-600 hover:bg-green-700 shadow-lg text-white"
-                            onClick={() => setShowConfirmModal(true)}
-                        >
-                            <CheckCircle2 className="w-5 h-5 mr-2" />
-                            FINALIZAR INGRESO ({Object.values(scanCounts).reduce((a, b) => a + b, 0)} items)
-                        </Button>
-                    )}
                 </div >
-            </div >
 
-            {/* Modal de edición de detalle */}
-            < EditDetalleModal
-                open={showEditModal}
-                onClose={handleModalClose}
-                detalle={scannedPaletData}
-                modo={workMode}
-                onValidar={handleModalValidar}
-                onAlmacenar={handleModalAlmacenar}
-                onActualizar={handleModalActualizar}
-            />
+                {/* Modal de edición de detalle */}
+                < EditDetalleModal
+                    open={showEditModal}
+                    onClose={handleModalClose}
+                    detalle={scannedPaletData}
+                    modo={workMode}
+                    onValidar={handleModalValidar}
+                    onAlmacenar={handleModalAlmacenar}
+                    onActualizar={handleModalActualizar}
+                />
 
-            {/* Modal de confirmación de ingreso */}
-            <ConfirmIngresoModal
-                isOpen={showConfirmModal}
-                onClose={() => setShowConfirmModal(false)}
-                onConfirm={async (observacion: string) => {
-                    if (!currentDoc) return
-                    // Build detalles array from scanCounts
-                    const orden = ordenes.find(o => o.id.toString() === currentDoc.id)
-                    if (!orden) return
-
-                    const detallesPayload = orden.detalles.map(d => ({
-                        detalleId: d.id,
-                        cantidadRecibida: scanCounts[d.item.codigo] || 0,
-                        ubicacion: 'SIN-UBICACION'
-                    }))
-
-                    await MovilService.confirmarIngreso(
-                        Number(currentDoc.id),
-                        detallesPayload,
-                        observacion,
-                        'MOBILE_USER'
-                    )
-
-                    toast.success('Ingreso confirmado. Stock actualizado.')
-                    setScanCounts({})
-                    setStep('search')
-                    await loadOrdenes(workMode)
-                }}
-                nroDocumento={currentDoc?.nroDocumento || ''}
-                detalles={
-                    currentDoc?.palets.map(p => {
+                {/* Modal de confirmación de ingreso */}
+                <ConfirmIngresoModal
+                    isOpen={showConfirmModal}
+                    onClose={() => setShowConfirmModal(false)}
+                    onConfirm={async (observacion: string) => {
+                        if (!currentDoc) return
+                        // Build detalles array from scanCounts
                         const orden = ordenes.find(o => o.id.toString() === currentDoc.id)
-                        const detalle = orden?.detalles.find(d => d.item.codigo === p.itemCode)
-                        return {
-                            id: p.id,
-                            itemCode: p.itemCode,
-                            descripcion: p.descripcion,
-                            cantidadEsperada: detalle?.cantidadEsperada || 0,
-                            cantidadEscaneada: scanCounts[p.itemCode] || 0
-                        }
-                    }) || []
-                }
-            />
-        </>
+                        if (!orden) return
+
+                        const detallesPayload = orden.detalles.map(d => ({
+                            detalleId: d.id,
+                            cantidadRecibida: scanCounts[d.item.codigo] || 0,
+                            ubicacion: 'SIN-UBICACION'
+                        }))
+
+                        await MovilService.confirmarIngreso(
+                            Number(currentDoc.id),
+                            detallesPayload,
+                            observacion,
+                            'MOBILE_USER'
+                        )
+
+                        toast.success('Ingreso confirmado. Stock actualizado.')
+                        setScanCounts({})
+                        setStep('search')
+                        await loadOrdenes(workMode)
+                    }}
+                    nroDocumento={currentDoc?.nroDocumento || ''}
+                    detalles={
+                        currentDoc?.palets.map(p => {
+                            const orden = ordenes.find(o => o.id.toString() === currentDoc.id)
+                            const detalle = orden?.detalles.find(d => d.item.codigo === p.itemCode)
+                            return {
+                                id: p.id,
+                                itemCode: p.itemCode,
+                                descripcion: p.descripcion,
+                                cantidadEsperada: detalle?.cantidadEsperada || 0,
+                                cantidadEscaneada: scanCounts[p.itemCode] || 0
+                            }
+                        }) || []
+                    }
+                />
+            </>
+        </MainLayout>
     )
 }
