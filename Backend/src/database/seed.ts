@@ -321,6 +321,66 @@ async function seed() {
                 { codItem: 'ELEC-005', descripcion: 'Teclado Mecánico', cantidad: 60, lote: 'ELE-2024-05', codigoBarra: '7503333222005', sku: 'ELEC-005', codigoFabrica: 'LOGI-TM-01', codigoSistema: 'INT-ELEC-005', unidadMedida: 'UNID' },
             ],
         },
+        // =====================
+        // DOCUMENTOS DE PRUEBA ADICIONALES
+        // =====================
+        // API_ERP - Test 1: Farmacéuticos simples
+        {
+            nroDocumento: 'SAP-TEST-001',
+            descripcion: 'Test API - Medicamentos Básicos',
+            tipoFuente: 'API_ERP',
+            proveedor: 'Farma Test S.A.',
+            fechaDocumento: new Date(),
+            estado: 'pendiente',
+            datosRaw: { pedido: 'TEST-F001', sistema: 'SAP-TEST' },
+            items: [
+                { codItem: 'FARM-001', descripcion: 'Paracetamol 500mg', cantidad: 20, lote: 'T-FARM-001', codigoBarra: '7502222111001', sku: 'FARM-001', codigoFabrica: 'TEST-PC-500', codigoSistema: 'TEST-FARM-001', unidadMedida: 'CAJA' },
+                { codItem: 'FARM-002', descripcion: 'Ibuprofeno 400mg', cantidad: 15, lote: 'T-FARM-002', codigoBarra: '7502222111002', sku: 'FARM-002', codigoFabrica: 'TEST-IB-400', codigoSistema: 'TEST-FARM-002', unidadMedida: 'CAJA' },
+            ],
+        },
+        // API_ERP - Test 2: Electrónicos simples
+        {
+            nroDocumento: 'SAP-TEST-002',
+            descripcion: 'Test API - Cables y Cargadores',
+            tipoFuente: 'API_ERP',
+            proveedor: 'Tech Test Corp',
+            fechaDocumento: new Date(),
+            estado: 'pendiente',
+            datosRaw: { pedido: 'TEST-E001', sistema: 'SAP-TEST' },
+            items: [
+                { codItem: 'ELEC-001', descripcion: 'Cable USB-C 1m', cantidad: 50, lote: 'T-ELEC-001', codigoBarra: '7503333222001', sku: 'ELEC-001', codigoFabrica: 'TEST-USB-C', codigoSistema: 'TEST-ELEC-001', unidadMedida: 'UNID' },
+                { codItem: 'ELEC-002', descripcion: 'Cargador 20W', cantidad: 30, lote: 'T-ELEC-002', codigoBarra: '7503333222002', sku: 'ELEC-002', codigoFabrica: 'TEST-CRG-20', codigoSistema: 'TEST-ELEC-002', unidadMedida: 'UNID' },
+            ],
+        },
+        // MANUAL - Test 1: Plásticos simples
+        {
+            nroDocumento: 'MAN-TEST-001',
+            descripcion: 'Test Manual - Plásticos Varios',
+            tipoFuente: 'MANUAL',
+            proveedor: 'Plásticos Manual S.A.',
+            fechaDocumento: new Date(),
+            estado: 'pendiente',
+            datosRaw: { origen: 'test_manual', factura: 'TM-001' },
+            items: [
+                { codItem: 'PLAST-004', descripcion: 'Cuchara Descartable', cantidad: 8, lote: 'M-PLAST-004', codigoBarra: '7501000000004', sku: 'PLAST-004', codigoFabrica: 'MAN-CUCH', codigoSistema: 'MAN-PLAST-004', unidadMedida: 'PQTE' },
+                { codItem: 'PLAST-005', descripcion: 'Cuchillo Descartable', cantidad: 6, lote: 'M-PLAST-005', codigoBarra: '7501000000005', sku: 'PLAST-005', codigoFabrica: 'MAN-CUCHI', codigoSistema: 'MAN-PLAST-005', unidadMedida: 'PQTE' },
+                { codItem: 'PLAST-006', descripcion: 'Tenedor Descartable', cantidad: 4, lote: 'M-PLAST-006', codigoBarra: '7501000000006', sku: 'PLAST-006', codigoFabrica: 'MAN-TENE', codigoSistema: 'MAN-PLAST-006', unidadMedida: 'PQTE' },
+            ],
+        },
+        // MANUAL - Test 2: Contenedores
+        {
+            nroDocumento: 'MAN-TEST-002',
+            descripcion: 'Test Manual - Contenedores y Tapas',
+            tipoFuente: 'MANUAL',
+            proveedor: 'Envases Manual Ltda.',
+            fechaDocumento: new Date(),
+            estado: 'pendiente',
+            datosRaw: { origen: 'test_manual', factura: 'TM-002' },
+            items: [
+                { codItem: 'PLAST-007', descripcion: 'Tapa Hermética', cantidad: 12, lote: 'M-PLAST-007', codigoBarra: '7501000000007', sku: 'PLAST-007', codigoFabrica: 'MAN-TAPA', codigoSistema: 'MAN-PLAST-007', unidadMedida: 'PQTE' },
+                { codItem: 'PLAST-008', descripcion: 'Contenedor 500ml', cantidad: 10, lote: 'M-PLAST-008', codigoBarra: '7501000000008', sku: 'PLAST-008', codigoFabrica: 'MAN-CONT', codigoSistema: 'MAN-PLAST-008', unidadMedida: 'PQTE' },
+            ],
+        },
     ];
 
     for (const docData of docsData) {
