@@ -19,7 +19,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { StockInventarioService, type StockInventarioBackend } from "@/lib/api/stock_inventario.service"
+import { StockInventarioService } from "@/lib/api/stock_inventario.service"
+import type { StockInventario } from "@/lib/models"
 import { toast } from "sonner"
 
 interface StockItem {
@@ -82,16 +83,17 @@ export default function ControlStockPage() {
       const data = await StockInventarioService.getAll()
       console.log("stock items", data)
 
-      const stockItems: StockItem[] = data.map(item => {
+      const stockItems: StockItem[] = data.map((item: StockInventario) => {
         const lote = item.detalleIngreso?.lote || "-"
         const vencimiento = item.detalleIngreso?.fechaVencimiento
           ? new Date(item.detalleIngreso.fechaVencimiento).toLocaleDateString("es-ES")
           : "-"
-        const descripcion = item.detalleIngreso?.codItem || item.sku
+        const codigo = item.item?.codigo || "N/A"
+        const descripcion = item.item?.descripcion || item.detalleIngreso?.codItem || "Sin descripción"
 
         return {
           id: String(item.id),
-          producto: item.sku,
+          producto: codigo,
           descripcion: descripcion,
           ubicacion: item.ubicacion,
           lote: lote,
